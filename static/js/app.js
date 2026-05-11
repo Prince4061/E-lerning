@@ -13,6 +13,9 @@ const App = {
     lives: 3,
     started: false
   },
+  // Screen history for back button handling
+  screenHistory: [],
+  isNavigating: false,
 
   /**
    * Initialize the application
@@ -29,6 +32,33 @@ const App = {
 
     // Load games from backend
     await GameRegistry.loadFromBackend();
+
+    // Handle browser back button
+    window.addEventListener('popstate', (e) => this.handleBrowserBack(e));
+  },
+
+  /**
+   * Handle browser back button
+   */
+  handleBrowserBack(e) {
+    if (this.isNavigating) return;
+
+    // If we're in a game, exit the game first
+    if (document.getElementById('screen-game').classList.contains('active')) {
+      GameLoader.unloadGame();
+      this.showScreen('hub', true);
+      return;
+    }
+
+    // Go to previous screen in history
+    if (this.screenHistory.length > 1) {
+      this.screenHistory.pop(); // Remove current
+      const prevScreen = this.screenHistory[this.screenHistory.length - 1];
+      this.showScreen(prevScreen, true);
+    } else {
+      // If no history, go to welcome
+      this.showScreen('welcome', true);
+    }
   },
 
   /**
@@ -41,11 +71,17 @@ const App = {
       if (data.logged_in && data.user) {
         this.user = data.user;
         localStorage.setItem('eduquest_user', JSON.stringify(this.user));
+        // Initialize history for logged in user
+        this.screenHistory = ['welcome', 'home'];
       }
     } catch (e) {
       console.warn('Could not check session:', e);
       // Fall back to localStorage
       this.restoreSession();
+      // Initialize history for local session
+      if (this.user) {
+        this.screenHistory = ['welcome', 'home'];
+      }
     }
   },
 
@@ -151,8 +187,10 @@ const App = {
     const result = await this.signup(name, age, mobile, password);
 
     if (result.success) {
-      // Go to subjects screen
-      this.showScreen('subjects');
+      // Initialize screen history on successful login
+      this.screenHistory = ['welcome', 'home'];
+      // Go to home screen
+      this.showScreen('home');
     } else {
       errorDiv.textContent = result.error;
       errorDiv.style.display = 'block';
@@ -307,6 +345,12 @@ const App = {
     if (savedUser) {
       try {
         this.user = JSON.parse(savedUser);
+        // Ensure user has id - if not, clear and redirect to login
+        if (!this.user || !this.user.id) {
+          console.warn('User session invalid, clearing...');
+          localStorage.removeItem('eduquest_user');
+          this.user = null;
+        }
       } catch (e) {
         localStorage.removeItem('eduquest_user');
       }
@@ -319,8 +363,23 @@ const App = {
 
   /**
    * Show a specific screen
+   * @param {string} screenId - The screen to show
+   * @param {boolean} fromHistory - If true, don't add to history (browser back)
    */
-  showScreen(screenId) {
+  showScreen(screenId, fromHistory = false) {
+    // Don't update history for certain screens during navigation
+    if (!fromHistory && !this.isNavigating) {
+      // Replace current history entry instead of pushing new one
+      // This prevents back button from reloading the app
+      if (this.screenHistory.length > 0) {
+        this.screenHistory[this.screenHistory.length - 1] = screenId;
+      } else {
+        this.screenHistory.push(screenId);
+      }
+    }
+
+    this.isNavigating = false;
+
     // Hide all screens
     document.querySelectorAll('.screen').forEach(screen => {
       screen.classList.remove('active');
@@ -337,15 +396,145 @@ const App = {
       this.refreshHub();
     }
 
+    // Refresh home screen data
+    if (screenId === 'home' && this.user) {
+      this.refreshHome();
+    }
+
     // Update welcome text for subjects screen
     if (screenId === 'subjects' && this.user) {
       document.getElementById('welcome-text').textContent = `${this.user.name}, kon sa subject hai aapka favorite?`;
     }
 
-    // If user is logged in, show subjects instead of welcome
+    // If user is logged in, show home instead of welcome
     if (screenId === 'welcome' && this.user) {
-      this.showScreen('subjects');
+      this.showScreen('home', fromHistory);
     }
+  },
+
+  /**
+   * Refresh home screen with user data
+   */
+  async refreshHome() {
+    if (!this.user) return;
+
+    // Update user info
+    document.getElementById('home-username').textContent = `${this.user.name}!`;
+    document.getElementById('home-avatar').textContent = this.getAvatarEmoji(this.user.age);
+
+    // Load progress for both subjects
+    await this.loadHomeProgress();
+  },
+
+  /**
+   * Load home screen progress data
+   */
+  async loadHomeProgress() {
+    if (!this.user || !this.user.id) {
+      // Use local progress if not logged in
+      this.loadLocalProgress();
+      return;
+    }
+
+    try {
+      // Get progress for math
+      const mathResponse = await fetch(`/api/user/${this.user.id}/progress/math`);
+      const mathProgress = mathResponse.ok ? await mathResponse.json() : [];
+
+      // Get progress for science
+      const scienceResponse = await fetch(`/api/user/${this.user.id}/progress/science`);
+      const scienceProgress = scienceResponse.ok ? await scienceResponse.json() : [];
+
+      this.updateHomeStats(mathProgress, scienceProgress);
+    } catch (e) {
+      console.warn('Could not load progress from backend');
+      this.loadLocalProgress();
+    }
+  },
+
+  /**
+   * Update home screen stats
+   */
+  updateHomeStats(mathProgress, scienceProgress) {
+    // Calculate totals
+    let totalScore = 0;
+    let totalStars = 0;
+    let gamesPlayed = 0;
+
+    let mathCompleted = 0;
+    let mathStars = 0;
+    let scienceCompleted = 0;
+    let scienceStars = 0;
+
+    const allGames = [...mathProgress, ...scienceProgress];
+
+    allGames.forEach(game => {
+      if (game.progress) {
+        totalScore += game.progress.score || 0;
+        totalStars += game.progress.stars || 0;
+        if (game.progress.completed) {
+          gamesPlayed++;
+        }
+      }
+
+      if (game.subject === 'math') {
+        mathCompleted += game.progress?.completed ? 1 : 0;
+        mathStars += game.progress?.stars || 0;
+      } else {
+        scienceCompleted += game.progress?.completed ? 1 : 0;
+        scienceStars += game.progress?.stars || 0;
+      }
+    });
+
+    // Update UI
+    document.getElementById('total-score').textContent = totalScore;
+    document.getElementById('total-stars').textContent = totalStars;
+    document.getElementById('games-played').textContent = gamesPlayed;
+
+    // Math progress
+    const mathTotal = mathProgress.length || 3;
+    const mathPercent = (mathCompleted / mathTotal) * 100;
+    document.getElementById('math-progress-fill').style.width = `${mathPercent}%`;
+    document.getElementById('math-progress-text').textContent = `${mathCompleted}/${mathTotal} Levels`;
+    document.getElementById('math-stars').textContent = `⭐ ${mathStars}`;
+
+    // Science progress
+    const scienceTotal = scienceProgress.length || 3;
+    const sciencePercent = (scienceCompleted / scienceTotal) * 100;
+    document.getElementById('science-progress-fill').style.width = `${sciencePercent}%`;
+    document.getElementById('science-progress-text').textContent = `${scienceCompleted}/${scienceTotal} Levels`;
+    document.getElementById('science-stars').textContent = `⭐ ${scienceStars}`;
+  },
+
+  /**
+   * Load progress from localStorage (fallback)
+   */
+  loadLocalProgress() {
+    const progress = JSON.parse(localStorage.getItem('eduquest_progress') || '{}');
+
+    let totalScore = 0;
+    let totalStars = 0;
+    let gamesPlayed = 0;
+    let mathCompleted = 0;
+    let scienceCompleted = 0;
+
+    Object.values(progress).forEach(game => {
+      totalScore += game.score || 0;
+      totalStars += game.stars || 0;
+      if (game.completed) gamesPlayed++;
+      if (game.subject === 'math' && game.completed) mathCompleted++;
+      if (game.subject === 'science' && game.completed) scienceCompleted++;
+    });
+
+    document.getElementById('total-score').textContent = totalScore;
+    document.getElementById('total-stars').textContent = totalStars;
+    document.getElementById('games-played').textContent = gamesPlayed;
+
+    document.getElementById('math-progress-fill').style.width = `${(mathCompleted/3)*100}%`;
+    document.getElementById('math-progress-text').textContent = `${mathCompleted}/3 Levels`;
+
+    document.getElementById('science-progress-fill').style.width = `${(scienceCompleted/3)*100}%`;
+    document.getElementById('science-progress-text').textContent = `${scienceCompleted}/3 Levels`;
   },
 
   /**
@@ -579,9 +768,11 @@ const App = {
     }
 
     // Save progress to backend
+    console.log('Saving progress - User:', this.user, 'Game:', game.game_id, 'Score:', finalScore);
     if (this.user && this.user.id) {
+      console.log('User ID:', this.user.id);
       try {
-        await fetch('/api/progress', {
+        const response = await fetch('/api/progress', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -592,6 +783,8 @@ const App = {
             completed: passed
           })
         });
+        const result = await response.json();
+        console.log('Progress saved:', result);
 
         // Unlock next level if passed
         if (passed) {

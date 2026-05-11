@@ -410,6 +410,205 @@ input {
   color: var(--text-muted);
 }
 
+/* ============== HOME SCREEN (DASHBOARD) ============== */
+.home-container {
+  width: 100%;
+  max-width: 600px;
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.home-header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.logout-btn {
+  color: var(--secondary);
+}
+
+.home-user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.home-avatar {
+  width: 60px;
+  height: 60px;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.home-greeting h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.home-date {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-card .stat-icon {
+  font-size: 30px;
+}
+
+.stat-card .stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card .stat-value {
+  font-family: 'Fredoka One', cursive;
+  font-size: 28px;
+  color: var(--primary);
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.subject-progress-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: var(--text-primary);
+}
+
+.subject-progress-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.subject-progress-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.subject-progress-icon {
+  font-size: 40px;
+}
+
+.subject-progress-info {
+  flex: 1;
+}
+
+.subject-progress-info h4 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.progress-bar-small {
+  height: 8px;
+  background: var(--bg-light);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill-small {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 10px;
+  transition: width var(--transition-normal);
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.subject-stars {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--warning);
+}
+
+.math-progress {
+  border-left: 4px solid var(--math-color);
+}
+
+.science-progress {
+  border-left: 4px solid var(--science-color);
+}
+
+.quick-play-section {
+  margin-bottom: 20px;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.recent-score-card {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  padding: 20px;
+  border-radius: var(--radius-md);
+  color: white;
+}
+
+.recent-score-header {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.recent-score-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recent-game-name {
+  font-size: 16px;
+}
+
+.recent-score-value {
+  font-family: 'Fredoka One', cursive;
+  font-size: 32px;
+}
+
 /* ============== HUB SCREEN ============== */
 .hub-container {
   width: 100%;
@@ -452,6 +651,11 @@ input {
 .user-subject {
   font-size: 14px;
   color: var(--text-muted);
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
 }
 
 .progress-section {

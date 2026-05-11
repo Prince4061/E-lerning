@@ -131,7 +131,7 @@
   <!-- Subject Selection Screen -->
   <div id="screen-subjects" class="screen">
     <div class="subjects-container">
-      <div class="back-btn" onclick="App.showScreen('profile')">← Back</div>
+      <div class="back-btn" onclick="App.showScreen('home')">← Back</div>
       <h2 class="screen-title">Choose your adventure!</h2>
       <p class="screen-subtitle" id="welcome-text">Kon sa subject hai aapka favorite?</p>
 
@@ -156,6 +156,94 @@
             <span class="topic-tag">Plants</span>
             <span class="topic-tag">Nature</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Home Screen (Dashboard) -->
+  <div id="screen-home" class="screen">
+    <div class="home-container">
+      <div class="home-header">
+        <div class="home-user-info">
+          <div class="home-avatar" id="home-avatar">😊</div>
+          <div class="home-greeting">
+            <h2 id="home-username">Hello!</h2>
+            <p class="home-date">Let's learn something new today!</p>
+          </div>
+        </div>
+        <div class="home-header-buttons">
+          <button class="btn btn-icon-only" onclick="App.showScreen('subjects')">⚙️</button>
+          <button class="btn btn-icon-only logout-btn" onclick="App.logout()" title="Logout">🚪</button>
+        </div>
+      </div>
+
+      <div class="stats-overview">
+        <div class="stat-card total-score">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-info">
+            <span class="stat-value" id="total-score">0</span>
+            <span class="stat-label">Total Score</span>
+          </div>
+        </div>
+        <div class="stat-card total-stars">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-info">
+            <span class="stat-value" id="total-stars">0</span>
+            <span class="stat-label">Stars Earned</span>
+          </div>
+        </div>
+        <div class="stat-card games-played">
+          <div class="stat-icon">🎮</div>
+          <div class="stat-info">
+            <span class="stat-value" id="games-played">0</span>
+            <span class="stat-label">Games Played</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="subject-progress-section">
+        <h3 class="section-title">Your Progress</h3>
+
+        <div class="subject-progress-card math-progress" onclick="App.selectSubject('math')">
+          <div class="subject-progress-icon">🔢</div>
+          <div class="subject-progress-info">
+            <h4>Math Magic</h4>
+            <div class="progress-bar-small">
+              <div class="progress-fill-small" id="math-progress-fill" style="width: 0%"></div>
+            </div>
+            <span class="progress-text" id="math-progress-text">0/3 Levels</span>
+          </div>
+          <div class="subject-stars" id="math-stars">⭐ 0</div>
+        </div>
+
+        <div class="subject-progress-card science-progress" onclick="App.selectSubject('science')">
+          <div class="subject-progress-icon">🔬</div>
+          <div class="subject-progress-info">
+            <h4>Science Squad</h4>
+            <div class="progress-bar-small">
+              <div class="progress-fill-small" id="science-progress-fill" style="width: 0%"></div>
+            </div>
+            <span class="progress-text" id="science-progress-text">0/3 Levels</span>
+          </div>
+          <div class="subject-stars" id="science-stars">⭐ 0</div>
+        </div>
+      </div>
+
+      <div class="quick-play-section">
+        <h3 class="section-title">Quick Play</h3>
+        <button class="btn btn-primary btn-large btn-full" onclick="App.showScreen('subjects')">
+          🎯 Start New Game
+        </button>
+      </div>
+
+      <div class="recent-score-card" id="recent-score-card" style="display: none;">
+        <div class="recent-score-header">
+          <span>📊 Last Game Score</span>
+        </div>
+        <div class="recent-score-content">
+          <span class="recent-game-name" id="recent-game-name">-</span>
+          <span class="recent-score-value" id="recent-score-value">0%</span>
         </div>
       </div>
     </div>
