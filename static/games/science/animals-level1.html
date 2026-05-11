@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animal Kingdom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    .game-container {
+      text-align: center;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .question-display {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(9, 132, 227, 0.15);
+      margin-bottom: 30px;
+    }
+
+    .question-text {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 20px;
+      color: #636E72;
+      margin-bottom: 15px;
+    }
+
+    .animal-display {
+      font-size: 80px;
+      margin: 20px 0;
+      animation: animalBounce 2s infinite;
+    }
+
+    @keyframes animalBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .animal-name {
+      font-family: 'Fredoka One', cursive;
+      font-size: 32px;
+      color: #0984E3;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .category-btn {
+      padding: 20px 30px;
+      font-size: 18px;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      background: white;
+      border: 4px solid #E4E8EB;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #2D3436;
+    }
+
+    .category-btn:hover {
+      border-color: #0984E3;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(9, 132, 227, 0.2);
+    }
+
+    .category-btn.correct {
+      background: #4ECB71;
+      border-color: #4ECB71;
+      color: white;
+      animation: correctPulse 0.5s ease;
+    }
+
+    .category-btn.wrong {
+      background: #FF6B6B;
+      border-color: #FF6B6B;
+      color: white;
+      animation: shake 0.5s ease;
+    }
+
+    .category-btn:disabled {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    @keyframes correctPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .question-counter {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 18px;
+      color: #636E72;
+      margin-bottom: 20px;
+    }
+
+    .feedback-message {
+      font-size: 24px;
+      margin-top: 20px;
+      font-weight: 700;
+    }
+
+    .feedback-message.correct {
+      color: #4ECB71;
+    }
+
+    .feedback-message.wrong {
+      color: #FF6B6B;
+    }
+  </style>
+</head>
+<body style="background: linear-gradient(135deg, #F8F9FF 0%, #E4E8EB 100%);">
+  <div class="game-container">
+    <div class="question-counter">
+      Question <span id="current-q">1</span> / <span id="total-q">10</span>
+    </div>
+
+    <div class="question-display">
+      <div class="question-text">Which category does this animal belong to?</div>
+      <div class="animal-display" id="animal-emoji">🐕</div>
+      <div class="animal-name" id="animal-name">Dog</div>
+    </div>
+
+    <div class="categories-grid" id="categories">
+      <!-- Categories will be generated here -->
+    </div>
+
+    <div class="feedback-message" id="feedback"></div>
+  </div>
+
+  <script>
+    // Animal data
+    const animalData = [
+      { emoji: '🦁', name: 'Lion', category: 'Mammal' },
+      { emoji: '🐘', name: 'Elephant', category: 'Mammal' },
+      { emoji: '🐢', name: 'Turtle', category: 'Reptile' },
+      { emoji: '🐍', name: 'Snake', category: 'Reptile' },
+      { emoji: '🦅', name: 'Eagle', category: 'Bird' },
+      { emoji: '🐦', name: 'Sparrow', category: 'Bird' },
+      { emoji: '🐟', name: 'Fish', category: 'Fish' },
+      { emoji: '🦈', name: 'Shark', category: 'Fish' },
+      { emoji: '🐸', name: 'Frog', category: 'Amphibian' },
+      { emoji: '🦎', name: 'Salamander', category: 'Amphibian' },
+      { emoji: '🦋', name: 'Butterfly', category: 'Insect' },
+      { emoji: '🐝', name: 'Bee', category: 'Insect' },
+      { emoji: '🐕', name: 'Dog', category: 'Mammal' },
+      { emoji: '🐈', name: 'Cat', category: 'Mammal' },
+      { emoji: '🐦‍⬛', name: 'Crow', category: 'Bird' },
+      { emoji: '🐊', name: 'Crocodile', category: 'Reptile' },
+      { emoji: '🐙', name: 'Octopus', category: 'Aquatic' },
+      { emoji: '🦀', name: 'Crab', category: 'Aquatic' },
+      { emoji: '🦆', name: 'Duck', category: 'Bird' },
+      { emoji: '🐰', name: 'Rabbit', category: 'Mammal' }
+    ];
+
+    const categories = ['Mammal', 'Bird', 'Reptile', 'Fish', 'Amphibian', 'Insect', 'Aquatic'];
+
+    // Game State
+    const state = {
+      currentQuestion: 1,
+      totalQuestions: 10,
+      correctCategory: '',
+      currentAnimal: null,
+      isAnswered: false
+    };
+
+    // Initialize game
+    function science_animals_1_init() {
+      generateQuestion();
+    }
+
+    // Generate a new question
+    function generateQuestion() {
+      if (state.currentQuestion > state.totalQuestions) {
+        EduQuest.endGame();
+        return;
+      }
+
+      state.isAnswered = false;
+
+      // Update counter
+      document.getElementById('current-q').textContent = state.currentQuestion;
+      document.getElementById('total-q').textContent = state.totalQuestions;
+
+      // Pick random animal
+      const animal = animalData[Math.floor(Math.random() * animalData.length)];
+      state.currentAnimal = animal;
+      state.correctCategory = animal.category;
+
+      // Update display
+      document.getElementById('animal-emoji').textContent = animal.emoji;
+      document.getElementById('animal-name').textContent = animal.name;
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('feedback').className = 'feedback-message';
+
+      // Generate category choices
+      const choices = generateChoices(state.correctCategory);
+
+      // Render choices
+      const categoriesDiv = document.getElementById('categories');
+      categoriesDiv.innerHTML = '';
+
+      choices.forEach(category => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.textContent = category;
+        btn.onclick = () => checkAnswer(category, btn);
+        categoriesDiv.appendChild(btn);
+      });
+    }
+
+    // Generate category choices
+    function generateChoices(correct) {
+      const choices = [correct];
+      const otherCategories = categories.filter(c => c !== correct);
+
+      // Shuffle and pick 3 more
+      const shuffled = otherCategories.sort(() => Math.random() - 0.5);
+
+      for (let i = 0; i < 3 && i < shuffled.length; i++) {
+        choices.push(shuffled[i]);
+      }
+
+      return choices.sort(() => Math.random() - 0.5);
+    }
+
+    // Check answer
+    function checkAnswer(answer, btn) {
+      if (state.isAnswered) return;
+      state.isAnswered = true;
+
+      const buttons = document.querySelectorAll('.category-btn');
+      buttons.forEach(b => b.disabled = true);
+
+      const feedback = document.getElementById('feedback');
+
+      if (answer === state.correctCategory) {
+        btn.classList.add('correct');
+        feedback.textContent = 'Correct! 🎉';
+        feedback.className = 'feedback-message correct';
+        EduQuest.submitScore(10);
+      } else {
+        btn.classList.add('wrong');
+        feedback.textContent = `It\'s a ${state.correctCategory}!`;
+        feedback.className = 'feedback-message wrong';
+        EduQuest.loseLife();
+
+        // Show correct answer
+        buttons.forEach(b => {
+          if (b.textContent === state.correctCategory) {
+            b.classList.add('correct');
+          }
+        });
+      }
+
+      state.currentQuestion++;
+
+      setTimeout(generateQuestion, 1500);
+    }
+
+    // Auto-initialize when loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof App !== 'undefined') {
+        // Will be called by App.startGame()
+      }
+    });
+  </script>
+</body>
+</html>

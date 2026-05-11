@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Ninja - Addition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    .game-container {
+      text-align: center;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .question-display {
+      background: white;
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(108, 99, 255, 0.15);
+      margin-bottom: 30px;
+    }
+
+    .question-text {
+      font-family: 'Fredoka One', cursive;
+      font-size: 28px;
+      color: #2D3436;
+      margin-bottom: 20px;
+    }
+
+    .math-equation {
+      font-family: 'Fredoka One', cursive;
+      font-size: 72px;
+      color: #6C63FF;
+      margin: 30px 0;
+    }
+
+    .choices-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .choice-btn {
+      padding: 25px;
+      font-size: 36px;
+      font-family: 'Fredoka One', cursive;
+      background: white;
+      border: 4px solid #E4E8EB;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #2D3436;
+    }
+
+    .choice-btn:hover {
+      border-color: #6C63FF;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(108, 99, 255, 0.2);
+    }
+
+    .choice-btn:active {
+      transform: translateY(0);
+    }
+
+    .choice-btn.correct {
+      background: #4ECB71;
+      border-color: #4ECB71;
+      color: white;
+      animation: correctPulse 0.5s ease;
+    }
+
+    .choice-btn.wrong {
+      background: #FF6B6B;
+      border-color: #FF6B6B;
+      color: white;
+      animation: shake 0.5s ease;
+    }
+
+    .choice-btn:disabled {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    @keyframes correctPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .timer-bar {
+      width: 100%;
+      height: 8px;
+      background: #E4E8EB;
+      border-radius: 4px;
+      margin-bottom: 30px;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6C63FF, #FF6B6B);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+    }
+
+    .question-counter {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 18px;
+      color: #636E72;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body style="background: linear-gradient(135deg, #F8F9FF 0%, #E4E8EB 100%);">
+  <div class="game-container">
+    <div class="question-counter">
+      Question <span id="current-q">1</span> / <span id="total-q">10</span>
+    </div>
+
+    <div class="timer-bar">
+      <div class="timer-fill" id="timer-fill" style="width: 100%"></div>
+    </div>
+
+    <div class="question-display">
+      <div class="question-text">What is</div>
+      <div class="math-equation" id="equation">5 + 3 = ?</div>
+    </div>
+
+    <div class="choices-grid" id="choices">
+      <!-- Choices will be generated here -->
+    </div>
+  </div>
+
+  <script>
+    // Game State
+    const state = {
+      currentQuestion: 1,
+      totalQuestions: 10,
+      correctAnswer: 0,
+      timer: null,
+      timeLeft: 100,
+      isAnswered: false
+    };
+
+    // Initialize game
+    function math_addition_1_init() {
+      generateQuestion();
+    }
+
+    // Generate a new question
+    function generateQuestion() {
+      if (state.currentQuestion > state.totalQuestions) {
+        EduQuest.endGame();
+        return;
+      }
+
+      state.isAnswered = false;
+      state.timeLeft = 100;
+      state.currentQuestion = state.currentQuestion;
+
+      // Update counter
+      document.getElementById('current-q').textContent = state.currentQuestion;
+      document.getElementById('total-q').textContent = state.totalQuestions;
+
+      // Generate numbers (difficulty based on question number)
+      const maxNum = Math.min(5 + state.currentQuestion, 20);
+      const num1 = Math.floor(Math.random() * maxNum) + 1;
+      const num2 = Math.floor(Math.random() * maxNum) + 1;
+
+      state.correctAnswer = num1 + num2;
+
+      // Update equation
+      document.getElementById('equation').textContent = `${num1} + ${num2} = ?`;
+
+      // Generate choices
+      const choices = generateChoices(state.correctAnswer, 4);
+
+      // Render choices
+      const choicesDiv = document.getElementById('choices');
+      choicesDiv.innerHTML = '';
+
+      choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = choice;
+        btn.onclick = () => checkAnswer(choice, btn);
+        choicesDiv.appendChild(btn);
+      });
+
+      // Start timer
+      startTimer();
+    }
+
+    // Generate answer choices
+    function generateChoices(correct, count) {
+      const choices = [correct];
+      const range = Math.max(10, correct);
+
+      while (choices.length < count) {
+        const wrong = Math.floor(Math.random() * range * 2) - range/2;
+        if (wrong !== correct && wrong > 0 && !choices.includes(wrong)) {
+          choices.push(wrong);
+        }
+      }
+
+      // Shuffle
+      return choices.sort(() => Math.random() - 0.5);
+    }
+
+    // Start timer animation
+    function startTimer() {
+      const timerFill = document.getElementById('timer-fill');
+      state.timer = setInterval(() => {
+        state.timeLeft -= 2;
+        timerFill.style.width = state.timeLeft + '%';
+
+        if (state.timeLeft <= 0) {
+          clearInterval(state.timer);
+          handleTimeout();
+        }
+      }, 200);
+    }
+
+    // Handle timeout
+    function handleTimeout() {
+      if (!state.isAnswered) {
+        state.isAnswered = true;
+        EduQuest.loseLife();
+        showCorrectAnswer();
+      }
+    }
+
+    // Check answer
+    function checkAnswer(answer, btn) {
+      if (state.isAnswered) return;
+      state.isAnswered = true;
+
+      clearInterval(state.timer);
+
+      const buttons = document.querySelectorAll('.choice-btn');
+      buttons.forEach(b => b.disabled = true);
+
+      if (answer === state.correctAnswer) {
+        btn.classList.add('correct');
+        EduQuest.submitScore(10);
+      } else {
+        btn.classList.add('wrong');
+        EduQuest.loseLife();
+        showCorrectAnswer();
+      }
+
+      state.currentQuestion++;
+
+      setTimeout(generateQuestion, 1000);
+    }
+
+    // Show correct answer
+    function showCorrectAnswer() {
+      const buttons = document.querySelectorAll('.choice-btn');
+      buttons.forEach(btn => {
+        if (parseInt(btn.textContent) === state.correctAnswer) {
+          btn.classList.add('correct');
+        }
+        btn.disabled = true;
+      });
+    }
+
+    // Auto-initialize when loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof App !== 'undefined') {
+        // Will be called by App.startGame()
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduQuest - Learning Through Play</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@500;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+</head>
+<body>
+  <!-- Welcome Screen -->
+  <div id="screen-welcome" class="screen active">
+    <div class="welcome-container">
+      <div class="logo-bounce">
+        <span class="logo-icon">🚀</span>
+        <h1 class="logo-text">EduQuest</h1>
+      </div>
+      <p class="tagline">Games khel, Concepts Seekh!</p>
+      <div class="mascot">
+        <span class="mascot-emoji">🦸‍♂️</span>
+        <div class="speech-bubble">Ready to learn?</div>
+      </div>
+      <button class="btn btn-primary btn-large" onclick="App.showScreen('profile')">
+        Start Learning <span class="btn-icon">▶</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile Screen -->
+  <div id="screen-profile" class="screen">
+    <div class="profile-container">
+      <div class="back-btn" onclick="App.showScreen('welcome')">← Back</div>
+      <h2 class="screen-title">Tell us about yourself!</h2>
+
+      <div class="form-group">
+        <label class="form-label">What's your name?</label>
+        <input type="text" id="player-name" class="form-input" placeholder="Enter your name" maxlength="20">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">How old are you? <span id="age-display">8</span> years</label>
+        <input type="range" id="player-age" class="age-slider" min="5" max="15" value="8" oninput="document.getElementById('age-display').textContent = this.value">
+        <div class="age-hints">
+          <span>5</span><span>10</span><span>15</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-large" onclick="App.saveProfile()">
+        Let's Go! <span class="btn-icon">✨</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Subject Selection Screen -->
+  <div id="screen-subjects" class="screen">
+    <div class="subjects-container">
+      <div class="back-btn" onclick="App.showScreen('profile')">← Back</div>
+      <h2 class="screen-title">Choose your adventure!</h2>
+      <p class="screen-subtitle" id="welcome-text">Kon sa subject hai aapka favorite?</p>
+
+      <div class="subject-cards">
+        <div class="subject-card math-card" onclick="App.selectSubject('math')">
+          <div class="subject-icon">🔢</div>
+          <h3>Math Magic</h3>
+          <p>Numbers, Addition, Subtraction & More!</p>
+          <div class="subject-topics">
+            <span class="topic-tag">Numbers</span>
+            <span class="topic-tag">Add</span>
+            <span class="topic-tag">Subtract</span>
+          </div>
+        </div>
+
+        <div class="subject-card science-card" onclick="App.selectSubject('science')">
+          <div class="subject-icon">🔬</div>
+          <h3>Science Squad</h3>
+          <p>Discover Animals, Plants & Nature!</p>
+          <div class="subject-topics">
+            <span class="topic-tag">Animals</span>
+            <span class="topic-tag">Plants</span>
+            <span class="topic-tag">Nature</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Hub Screen -->
+  <div id="screen-hub" class="screen">
+    <div class="hub-container">
+      <header class="hub-header">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">😊</div>
+          <div>
+            <div class="user-name" id="display-name">Player</div>
+            <div class="user-subject" id="subject-badge">Math</div>
+          </div>
+        </div>
+        <button class="btn btn-icon-only" onclick="App.confirmReset()">🔄</button>
+      </header>
+
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>Level Progress</span>
+          <span id="progress-text">0/3 Complete</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="levels-grid" id="levels-grid">
+        <!-- Levels loaded dynamically -->
+      </div>
+
+      <div class="hub-footer">
+        <button class="btn btn-secondary" onclick="App.showScreen('subjects')">
+          ← Change Subject
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="screen-game" class="screen">
+    <div class="game-container">
+      <div class="game-header">
+        <div class="game-info">
+          <span class="game-title" id="current-game-title">Game</span>
+          <span class="game-level" id="current-game-level">Level 1</span>
+        </div>
+        <div class="game-stats">
+          <div class="stat">
+            <span class="stat-icon">⭐</span>
+            <span class="stat-value" id="game-score">0</span>
+          </div>
+          <div class="stat lives">
+            <span class="stat-icon">❤️</span>
+            <span class="stat-value" id="game-lives">3</span>
+          </div>
+        </div>
+        <button class="btn btn-icon-only" onclick="App.confirmExit()">✕</button>
+      </div>
+
+      <div class="game-area" id="game-area">
+        <!-- Game content loads here dynamically -->
+      </div>
+
+      <div class="game-instructions" id="game-instructions">
+        <div class="instructions-content">
+          <h3 id="game-instruction-title">How to Play</h3>
+          <p id="game-instruction-text">Instructions will appear here</p>
+          <button class="btn btn-primary" onclick="App.startGame()">Play Now! 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="screen-results" class="screen">
+    <div class="results-container">
+      <div class="results-header">
+        <div id="result-icon" class="result-icon">🎉</div>
+        <h2 id="result-title" class="result-title">Great Job!</h2>
+        <p id="result-message" class="result-message">Keep learning!</p>
+      </div>
+
+      <div class="score-display">
+        <div class="score-circle">
+          <span class="score-number" id="final-score">0</span>
+          <span class="score-label">Points</span>
+        </div>
+        <div class="stars-display" id="stars-display">
+          <span class="star">⭐</span>
+          <span class="star">⭐</span>
+          <span class="star">⭐</span>
+        </div>
+      </div>
+
+      <div class="result-details">
+        <div class="detail-item">
+          <span>Pass Target:</span>
+          <span id="pass-target">70%</span>
+        </div>
+        <div class="detail-item">
+          <span>Your Score:</span>
+          <span id="your-score">0%</span>
+        </div>
+        <div class="detail-item">
+          <span>Status:</span>
+          <span id="pass-status" class="status-badge passed">Passed!</span>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn btn-secondary" onclick="App.retryGame()">
+          🔄 Try Again
+        </button>
+        <button class="btn btn-primary" id="next-level-btn" onclick="App.nextLevel()">
+          Next Level ➡️
+        </button>
+      </div>
+
+      <button class="btn btn-link" onclick="App.showScreen('hub')">
+        ← Back to Levels
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-content" id="modal-content">
+        <p id="modal-message">Are you sure?</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+          <button class="btn btn-danger" id="modal-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confetti Container -->
+  <div class="confetti-container" id="confetti-container"></div>
+
+  <script src="{{ url_for('static', filename='js/game-registry.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/game-loader.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

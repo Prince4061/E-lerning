@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balloon Pop - Ascending/Descending</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+            background: #f0f9ff;
+            user-select: none;
+        }
+
+        h1, .instruction-text {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .balloon {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 10px 8px rgba(0,0,0,0.1));
+        }
+
+        .balloon:active {
+            transform: scale(0.9);
+        }
+
+        .balloon-inner {
+            width: 80px;
+            height: 100px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        .balloon-inner::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 10px solid inherit;
+            border-top-color: inherit;
+        }
+
+        .balloon-string {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            width: 2px;
+            height: 40px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .pop-effect {
+            animation: pop 0.3s ease-out forwards;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .floating-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F2F1 100%);
+        }
+
+        #game-canvas {
+            position: relative;
+            width: 100vw;
+            height: 80vh;
+            overflow: hidden;
+        }
+
+        .screen-overlay {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <div class="floating-bg"></div>
+
+    <!-- UI Header -->
+    <div class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-md shadow-sm z-10">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl font-bold text-blue-600">Score: <span id="score">0</span></span>
+        </div>
+        
+        <div id="instruction-box" class="px-6 py-2 bg-white rounded-full shadow-lg border-2 border-blue-400">
+            <p class="instruction-text text-xl md:text-2xl text-blue-800 text-center">
+                Pop in <span id="order-type" class="text-red-500 underline">ASCENDING</span> order
+            </p>
+        </div>
+
+        <div class="flex items-center gap-1" id="hearts-container">
+            <!-- Hearts will be injected here -->
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-canvas"></div>
+
+    <!-- Start/Game Over Screens -->
+    <div id="overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 screen-overlay">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-md w-full border-4 border-blue-200">
+            <h2 id="overlay-title" class="text-4xl font-bold text-blue-600 mb-4">Balloon Pop!</h2>
+            <p id="overlay-desc" class="text-gray-600 mb-8 text-lg">Help the balloons reach the sky in the correct order!</p>
+            <button id="action-btn" class="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-2xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg">
+                START GAME
+            </button>
+        </div>
+    </div>
+
+    <!-- Message Box (Custom Alert) -->
+    <div id="msg-box" class="fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 bg-red-500 text-white rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 text-lg font-bold">
+        Wrong Balloon! ❌
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const scoreEl = document.getElementById('score');
+        const orderTypeEl = document.getElementById('order-type');
+        const heartsContainer = document.getElementById('hearts-container');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const actionBtn = document.getElementById('action-btn');
+        const msgBox = document.getElementById('msg-box');
+
+        const COLORS = ['#FF5F5D', '#3F7CFF', '#49D49D', '#FFB347', '#A16AE8', '#FF69B4'];
+        
+        let score = 0;
+        let lives = 3;
+        let gameActive = false;
+        let balloons = [];
+        let currentLevelNumbers = [];
+        let targetOrder = 'ASCENDING'; // or 'DESCENDING'
+        let nextNumberToPop = null;
+        let balloonSpeed = 1.2;
+        let spawnInterval = 1500;
+        let animationId;
+
+        // Sound Manager using Web Audio API
+        const SoundManager = {
+            ctx: null,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            pop() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            wrong() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            },
+            levelWin() {
+                this.init();
+                [440, 554, 659, 880].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.1 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.1);
+                    osc.stop(this.ctx.currentTime + i * 0.1 + 0.2);
+                });
+            },
+            gameOver() {
+                this.init();
+                [392, 349, 329, 261].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.15 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.15);
+                    osc.stop(this.ctx.currentTime + i * 0.15 + 0.4);
+                });
+            }
+        };
+
+        // Initialize Hearts
+        function updateHearts() {
+            heartsContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('span');
+                heart.innerHTML = i < lives ? '❤️' : '🖤';
+                heart.className = 'text-2xl transition-all duration-300';
+                heartsContainer.appendChild(heart);
+            }
+        }
+
+        function showMessage(text, color = 'bg-red-500') {
+            msgBox.textContent = text;
+            msgBox.className = `fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 ${color} text-white rounded-full shadow-2xl transition-opacity z-50 text-lg font-bold opacity-100`;
+            setTimeout(() => {
+                msgBox.classList.add('opacity-0');
+            }, 1500);
+        }
+
+        function generateLevel() {
+            // Randomly decide Ascending or Descending
+            targetOrder = Math.random() > 0.5 ? 'ASCENDING' : 'DESCENDING';
+            orderTypeEl.textContent = targetOrder;
+            orderTypeEl.className = targetOrder === 'ASCENDING' ? 'text-blue-600' : 'text-purple-600';
+
+            // Generate 4 unique random numbers
+            const nums = [];
+            while(nums.length < 4) {
+                let r = Math.floor(Math.random() * 90) + 10;
+                if(!nums.includes(r)) nums.push(r);
+            }
+            
+            // Sort to find the sequence
+            const sorted = [...nums].sort((a, b) => a - b);
+            currentLevelNumbers = targetOrder === 'ASCENDING' ? sorted : sorted.reverse();
+            nextNumberToPop = currentLevelNumbers[0];
+
+            // Clear old balloons and spawn new ones
+            balloons.forEach(b => b.el.remove());
+            balloons = [];
+
+            // Spawn them at intervals or together? Let's spawn them together for level start
+            nums.forEach((num, index) => {
+                setTimeout(() => {
+                    createBalloon(num);
+                }, index * 300);
+            });
+        }
+
+        function createBalloon(number) {
+            if (!gameActive) return;
+
+            const el = document.createElement('div');
+            el.className = 'balloon';
+            
+            const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+            
+            el.innerHTML = `
+                <div class="balloon-inner" style="background-color: ${color};">
+                    ${number}
+                    <div class="balloon-string"></div>
+                </div>
+            `;
+
+            const x = Math.random() * (window.innerWidth - 100) + 20;
+            const y = window.innerHeight + 100;
+            const speed = (Math.random() * 0.5 + 0.5) * balloonSpeed;
+
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+
+            canvas.appendChild(el);
+
+            const balloonObj = {
+                el,
+                x,
+                y,
+                speed,
+                value: number
+            };
+
+            el.addEventListener('click', () => handlePop(balloonObj));
+            balloons.push(balloonObj);
+        }
+
+        function handlePop(balloon) {
+            if (!gameActive) return;
+
+            if (balloon.value === nextNumberToPop) {
+                // Correct!
+                SoundManager.pop();
+                balloon.el.classList.add('pop-effect');
+                score += 10;
+                scoreEl.textContent = score;
+                
+                // Remove from active list
+                balloons = balloons.filter(b => b !== balloon);
+                setTimeout(() => balloon.el.remove(), 300);
+
+                // Update next target
+                const currentIndex = currentLevelNumbers.indexOf(nextNumberToPop);
+                if (currentIndex < currentLevelNumbers.length - 1) {
+                    nextNumberToPop = currentLevelNumbers[currentIndex + 1];
+                } else {
+                    // Level Complete!
+                    SoundManager.levelWin();
+                    showMessage("Level Complete! 🌟", "bg-green-500");
+                    balloonSpeed += 0.2;
+                    setTimeout(generateLevel, 1000);
+                }
+            } else {
+                // Wrong!
+                SoundManager.wrong();
+                balloon.el.classList.add('shake');
+                setTimeout(() => balloon.el.classList.remove('shake'), 500);
+                
+                lives--;
+                updateHearts();
+                showMessage("Wrong Order! ❌");
+
+                if (lives <= 0) {
+                    endGame();
+                }
+            }
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                const b = balloons[i];
+                b.y -= b.speed;
+                b.el.style.top = `${b.y}px`;
+
+                // If balloon goes off screen
+                if (b.y < -150) {
+                    b.el.remove();
+                    balloons.splice(i, 1);
+                    if (gameActive) createBalloon(b.value);
+                }
+            }
+
+            animationId = requestAnimationFrame(updateGame);
+        }
+
+        function startGame() {
+            SoundManager.init();
+            score = 0;
+            lives = 3;
+            balloonSpeed = 1.2;
+            gameActive = true;
+            scoreEl.textContent = score;
+            updateHearts();
+            overlay.classList.add('hidden');
+            generateLevel();
+            updateGame();
+        }
+
+        function endGame() {
+            SoundManager.gameOver();
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            overlay.classList.remove('hidden');
+            overlayTitle.textContent = "Game Over!";
+            overlayTitle.className = "text-4xl font-bold text-red-600 mb-4";
+            overlayDesc.innerHTML = `Your final score: <span class="text-3xl block font-bold text-blue-600 mt-2">${score}</span>`;
+            actionBtn.textContent = "TRY AGAIN";
+            
+            balloons.forEach(b => b.el.remove());
+            balloons = [];
+        }
+
+        actionBtn.addEventListener('click', startGame);
+
+        // Initial setup
+        updateHearts();
+
+        // Responsive handling
+        window.addEventListener('resize', () => {
+            if (gameActive) {
+                balloons.forEach(b => {
+                    if (b.x > window.innerWidth - 100) {
+                        b.x = window.innerWidth - 100;
+                        b.el.style.left = `${b.x}px`;
+                    }
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>
