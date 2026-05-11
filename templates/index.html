@@ -21,13 +21,89 @@
         <span class="mascot-emoji">🦸‍♂️</span>
         <div class="speech-bubble">Ready to learn?</div>
       </div>
-      <button class="btn btn-primary btn-large" onclick="App.showScreen('profile')">
-        Start Learning <span class="btn-icon">▶</span>
-      </button>
+      <div class="welcome-buttons">
+        <button class="btn btn-primary btn-large" onclick="App.showScreen('signup')">
+          Sign Up <span class="btn-icon">✨</span>
+        </button>
+        <button class="btn btn-secondary btn-large" onclick="App.showScreen('login')">
+          Login <span class="btn-icon">🔑</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Profile Screen -->
+  <!-- Signup Screen -->
+  <div id="screen-signup" class="screen">
+    <div class="profile-container">
+      <div class="back-btn" onclick="App.showScreen('welcome')">← Back</div>
+      <h2 class="screen-title">Create Account!</h2>
+      <p class="screen-subtitle">Join EduQuest and start learning</p>
+
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input type="text" id="signup-name" class="form-input" placeholder="Enter your name" maxlength="20">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mobile Number</label>
+        <input type="tel" id="signup-mobile" class="form-input" placeholder="Enter 10-digit mobile number" maxlength="10">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">How old are you? <span id="signup-age-display">8</span> years</label>
+        <input type="range" id="signup-age" class="age-slider" min="5" max="15" value="8" oninput="document.getElementById('signup-age-display').textContent = this.value">
+        <div class="age-hints">
+          <span>5</span><span>10</span><span>15</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="signup-password" class="form-input" placeholder="Create a password" maxlength="20">
+      </div>
+
+      <div id="signup-error" class="error-message" style="display: none;"></div>
+
+      <button class="btn btn-primary btn-large" onclick="App.handleSignup()">
+        Create Account <span class="btn-icon">🎉</span>
+      </button>
+
+      <p class="switch-screen">
+        Already have account? <a href="#" onclick="App.showScreen('login')">Login</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="screen-login" class="screen">
+    <div class="profile-container">
+      <div class="back-btn" onclick="App.showScreen('welcome')">← Back</div>
+      <h2 class="screen-title">Welcome Back!</h2>
+      <p class="screen-subtitle">Login to continue learning</p>
+
+      <div class="form-group">
+        <label class="form-label">Mobile Number</label>
+        <input type="tel" id="login-mobile" class="form-input" placeholder="Enter your mobile number" maxlength="10">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="login-password" class="form-input" placeholder="Enter your password">
+      </div>
+
+      <div id="login-error" class="error-message" style="display: none;"></div>
+
+      <button class="btn btn-primary btn-large" onclick="App.handleLogin()">
+        Login <span class="btn-icon">🔓</span>
+      </button>
+
+      <p class="switch-screen">
+        New user? <a href="#" onclick="App.showScreen('signup')">Sign Up</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Profile Screen (after login) -->
   <div id="screen-profile" class="screen">
     <div class="profile-container">
       <div class="back-btn" onclick="App.showScreen('welcome')">← Back</div>
@@ -96,7 +172,10 @@
             <div class="user-subject" id="subject-badge">Math</div>
           </div>
         </div>
-        <button class="btn btn-icon-only" onclick="App.confirmReset()">🔄</button>
+        <div class="header-buttons">
+          <button class="btn btn-icon-only" onclick="App.confirmReset()">🔄</button>
+          <button class="btn btn-icon-only" onclick="App.logout()">🚪</button>
+        </div>
       </header>
 
       <div class="progress-section">

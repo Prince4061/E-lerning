@@ -22,13 +22,176 @@ const App = {
     GameLoader.init();
 
     // Try to restore session from localStorage
-    this.restoreSession();
+    await this.checkLoginStatus();
 
     // Register default games
     this.registerDefaultGames();
 
     // Load games from backend
     await GameRegistry.loadFromBackend();
+  },
+
+  /**
+   * Check login status from backend
+   */
+  async checkLoginStatus() {
+    try {
+      const response = await fetch('/api/check-session');
+      const data = await response.json();
+      if (data.logged_in && data.user) {
+        this.user = data.user;
+        localStorage.setItem('eduquest_user', JSON.stringify(this.user));
+      }
+    } catch (e) {
+      console.warn('Could not check session:', e);
+      // Fall back to localStorage
+      this.restoreSession();
+    }
+  },
+
+  /**
+   * User signup
+   */
+  async signup(name, age, mobile, password) {
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, age, mobile, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error };
+      }
+
+      // Login successful - save user
+      this.user = data.user;
+      localStorage.setItem('eduquest_user', JSON.stringify(this.user));
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  },
+
+  /**
+   * User login
+   */
+  async login(mobile, password) {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error };
+      }
+
+      // Login successful - save user
+      this.user = data.user;
+      localStorage.setItem('eduquest_user', JSON.stringify(this.user));
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  },
+
+  /**
+   * User logout
+   */
+  async logout() {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+    } catch (e) {
+      console.warn('Could not logout from backend');
+    }
+
+    localStorage.removeItem('eduquest_user');
+    localStorage.removeItem('eduquest_subject');
+    this.user = null;
+    this.currentSubject = null;
+    this.showScreen('welcome');
+  },
+
+  /**
+   * Handle signup form submission
+   */
+  async handleSignup() {
+    const name = document.getElementById('signup-name').value.trim();
+    const age = parseInt(document.getElementById('signup-age').value);
+    const mobile = document.getElementById('signup-mobile').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const errorDiv = document.getElementById('signup-error');
+
+    // Validation
+    if (!name) {
+      errorDiv.textContent = 'Please enter your name';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    if (!mobile || mobile.length !== 10 || !/^\d+$/.test(mobile)) {
+      errorDiv.textContent = 'Please enter a valid 10-digit mobile number';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    if (!password || password.length < 4) {
+      errorDiv.textContent = 'Password must be at least 4 characters';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    errorDiv.style.display = 'none';
+
+    // Call signup API
+    const result = await this.signup(name, age, mobile, password);
+
+    if (result.success) {
+      // Go to subjects screen
+      this.showScreen('subjects');
+    } else {
+      errorDiv.textContent = result.error;
+      errorDiv.style.display = 'block';
+    }
+  },
+
+  /**
+   * Handle login form submission
+   */
+  async handleLogin() {
+    const mobile = document.getElementById('login-mobile').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errorDiv = document.getElementById('login-error');
+
+    // Validation
+    if (!mobile) {
+      errorDiv.textContent = 'Please enter your mobile number';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    if (!password) {
+      errorDiv.textContent = 'Please enter your password';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    errorDiv.style.display = 'none';
+
+    // Call login API
+    const result = await this.login(mobile, password);
+
+    if (result.success) {
+      // Go to subjects screen
+      this.showScreen('subjects');
+    } else {
+      errorDiv.textContent = result.error;
+      errorDiv.style.display = 'block';
+    }
   },
 
   /**
@@ -172,6 +335,16 @@ const App = {
     // Handle screen-specific logic
     if (screenId === 'hub') {
       this.refreshHub();
+    }
+
+    // Update welcome text for subjects screen
+    if (screenId === 'subjects' && this.user) {
+      document.getElementById('welcome-text').textContent = `${this.user.name}, kon sa subject hai aapka favorite?`;
+    }
+
+    // If user is logged in, show subjects instead of welcome
+    if (screenId === 'welcome' && this.user) {
+      this.showScreen('subjects');
     }
   },
 

@@ -1,9 +1,11 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eduquest.db'
+app.config['SECRET_KEY'] = 'eduquest-secret-key-2024'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eduquest_new.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -14,13 +16,22 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     age = db.Column(db.Integer, nullable=False)
+    mobile = db.Column(db.String(20), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'age': self.age,
+            'mobile': self.mobile,
             'created_at': self.created_at.isoformat()
         }
 
@@ -94,6 +105,70 @@ def health():
 
 
 # ============== USER ROUTES ==============
+
+@app.route('/api/signup', methods=['POST'])
+def signup():
+    """User signup - no verification required"""
+    data = request.json
+
+    # Check if mobile already exists
+    existing_user = User.query.filter_by(mobile=data['mobile']).first()
+    if existing_user:
+        return jsonify({'error': 'Mobile number already registered'}), 400
+
+    # Validate required fields
+    if not data.get('name') or not data.get('mobile') or not data.get('password'):
+        return jsonify({'error': 'Name, mobile and password are required'}), 400
+
+    if data.get('age') is None:
+        return jsonify({'error': 'Age is required'}), 400
+
+    # Create new user
+    user = User(name=data['name'], age=data['age'], mobile=data['mobile'])
+    user.set_password(data['password'])
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Signup successful',
+        'user': user.to_dict()
+    }), 201
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """User login"""
+    data = request.json
+
+    user = User.query.filter_by(mobile=data['mobile']).first()
+    if not user or not user.check_password(data['password']):
+        return jsonify({'error': 'Invalid mobile number or password'}), 401
+
+    # Store user ID in session
+    session['user_id'] = user.id
+
+    return jsonify({
+        'message': 'Login successful',
+        'user': user.to_dict()
+    })
+
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """User logout"""
+    session.pop('user_id', None)
+    return jsonify({'message': 'Logged out successfully'})
+
+
+@app.route('/api/check-session', methods=['GET'])
+def check_session():
+    """Check if user is logged in"""
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user:
+            return jsonify({'logged_in': True, 'user': user.to_dict()})
+    return jsonify({'logged_in': False})
+
 
 @app.route('/api/user', methods=['POST'])
 def create_user():
