@@ -27,14 +27,14 @@ const App = {
     // Try to restore session from localStorage
     await this.checkLoginStatus();
 
-    // Register default games
-    this.registerDefaultGames();
-
     // Load games from backend
     await GameRegistry.loadFromBackend();
 
     // Handle browser back button
     window.addEventListener('popstate', (e) => this.handleBrowserBack(e));
+
+    // Initial navigation
+    this.showScreen('welcome');
   },
 
   /**
@@ -224,115 +224,14 @@ const App = {
     const result = await this.login(mobile, password);
 
     if (result.success) {
-      // Go to subjects screen
-      this.showScreen('subjects');
+      // Initialize screen history
+      this.screenHistory = ['welcome', 'home'];
+      // Go to home screen
+      this.showScreen('home');
     } else {
       errorDiv.textContent = result.error;
       errorDiv.style.display = 'block';
     }
-  },
-
-  /**
-   * Register default/sample games
-   */
-  registerDefaultGames() {
-    // Math - Level 1: Place Values (Balloon Pop)
-    GameRegistry.registerGame({
-      game_id: 'math-placevalue-1',
-      title: 'Balloon Pop',
-      subject: 'math',
-      level: 1,
-      concept: 'Place Values',
-      description: 'Pop balloons to find the correct digit based on place value!',
-      instructions: 'Pop the balloon with the digit that matches the requested place value (Ones, Tens, or Hundreds). You have 3 lives. Get 70% or more to pass!',
-      pass_threshold: 70,
-      min_age: 5,
-      html_file: '/static/games/math/placevalue-level1.html'
-    });
-
-    // Math - Level 1: Addition
-    GameRegistry.registerGame({
-      game_id: 'math-addition-1',
-      title: 'Number Ninja',
-      subject: 'math',
-      level: 1,
-      concept: 'Basic Addition',
-      description: 'Learn to add numbers with fun challenges!',
-      instructions: 'Solve the addition problems by clicking the correct answer. You have 3 lives. Get 70% or more to pass!',
-      pass_threshold: 70,
-      min_age: 5,
-      html_file: '/static/games/math/addition-level1.html'
-    });
-
-    // Math - Level 2: Ascending/Descending
-    GameRegistry.registerGame({
-      game_id: 'math-descending-2',
-      title: 'Balloon Order',
-      subject: 'math',
-      level: 2,
-      concept: 'Ascending/Descending',
-      description: 'Pop balloons in the correct order - ascending or descending!',
-      instructions: 'Pop the balloons in ASCENDING or DESCENDING order as shown. You have 3 lives.',
-      pass_threshold: 70,
-      min_age: 6,
-      html_file: '/static/games/math/descending-level2.html'
-    });
-
-    // Math - Level 3: Multiplication
-    GameRegistry.registerGame({
-      game_id: 'math-multiplication-3',
-      title: 'Times Table Trek',
-      subject: 'math',
-      level: 3,
-      concept: 'Multiplication',
-      description: 'Learn times tables with exciting challenges!',
-      instructions: 'Multiply numbers to earn points. Pass with 70% or higher!',
-      pass_threshold: 70,
-      min_age: 7,
-      html_file: '/static/games/math/multiplication-level3.html'
-    });
-
-    // Science - Level 1: Animals
-    GameRegistry.registerGame({
-      game_id: 'science-animals-1',
-      title: 'Animal Kingdom',
-      subject: 'science',
-      level: 1,
-      concept: 'Animal Types',
-      description: 'Learn about different animals and their homes!',
-      instructions: 'Match animals to their correct category. 70% required to pass!',
-      pass_threshold: 70,
-      min_age: 5,
-      html_file: '/static/games/science/animals-level1.html'
-    });
-
-    // Science - Level 2: Plants
-    GameRegistry.registerGame({
-      game_id: 'science-plants-2',
-      title: 'Plant Power',
-      subject: 'science',
-      level: 2,
-      concept: 'Plant Life',
-      description: 'Discover how plants grow and what they need!',
-      instructions: 'Answer questions about plants to complete the level.',
-      pass_threshold: 70,
-      min_age: 6,
-      html_file: '/static/games/science/plants-level2.html'
-    });
-
-    // Science - Level 3: Human Body
-    GameRegistry.registerGame({
-      game_id: 'science-body-3',
-      title: 'Body Builders',
-      subject: 'science',
-      level: 3,
-      concept: 'Human Body',
-      description: 'Learn about organs and body systems!',
-      instructions: 'Match organs to their functions to win!',
-      pass_threshold: 70,
-      min_age: 7,
-      html_file: '/static/games/science/body-level3.html'
-    });
   },
 
   /**
@@ -393,6 +292,9 @@ const App = {
 
     // Handle screen-specific logic
     if (screenId === 'hub') {
+      if (window.GameLoader) {
+        GameLoader.unloadGame();
+      }
       this.refreshHub();
     }
 
@@ -629,7 +531,9 @@ const App = {
     // Create progress map
     const progressMap = {};
     progress.forEach(p => {
-      progressMap[p.game_id] = p;
+      if (p.progress) {
+        progressMap[p.game_id] = p.progress;
+      }
     });
 
     // Render level cards

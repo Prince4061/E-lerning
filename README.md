@@ -45,42 +45,38 @@ python app.py
 # http://localhost:5000
 ```
 
-## Adding New Games (Scalable!)
+## Adding New Games (Auto-Discovery Architecture 🚀)
+
+We have implemented a highly scalable Auto-Discovery system. You NO LONGER need to edit any core Python or JavaScript files to add a new game!
 
 ### Step 1: Create your game HTML file
 
-Create a new HTML file in the appropriate folder:
+Create a new HTML file (containing your HTML, CSS, and JS) in the appropriate folder:
 - Math games: `static/games/math/your-game.html`
 - Science games: `static/games/science/your-game.html`
 
-### Step 2: Register the game
+### Step 2: Inject JSON Metadata
 
-Add game registration to `app.js` `registerDefaultGames()` function:
-
-```javascript
-// Example: Adding a subtraction game
-GameRegistry.registerGame({
-  game_id: 'math-subtraction-2',
-  title: 'Minus Monster',
-  subject: 'math',
-  level: 2,
-  concept: 'Subtraction',
-  description: 'Master subtraction!',
-  instructions: 'Solve subtraction problems...',
-  pass_threshold: 70,
-  min_age: 6,
-  html_file: '/static/games/math/subtraction-level2.html'
-});
-```
-
-### Step 3: Create game HTML with initialization function
+Add a JSON `<script>` block directly inside the `<head>` of your new HTML file. The backend will automatically scan and register this:
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
+  <script id="game-metadata" type="application/json">
+  {
+    "game_id": "math-subtraction-2",
+    "title": "Minus Monster",
+    "subject": "math",
+    "level": 2,
+    "concept": "Subtraction",
+    "description": "Master subtraction!",
+    "instructions": "Solve subtraction problems to win.",
+    "pass_threshold": 70,
+    "min_age": 6
+  }
+  </script>
   <title>Your Game</title>
-  <link rel="stylesheet" href="../../css/main.css">
 </head>
 <body>
   <!-- Your game content here -->
@@ -100,14 +96,19 @@ GameRegistry.registerGame({
         EduQuest.loseLife();
       }
     }
+    
+    // Remember to clear any intervals before calling endGame!
+    function gameOver() {
+      EduQuest.endGame();
+    }
   </script>
 </body>
 </html>
 ```
 
-### Step 4: Start the app
+### Step 3: Restart the Server
 
-The game will automatically appear in the level hub!
+Simply restart your Flask server (`python app.py`). The backend will automatically discover your new HTML file and it will appear in the Level Hub!
 
 ## Game API
 

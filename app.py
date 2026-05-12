@@ -2,6 +2,8 @@ from flask import Flask, render_template, jsonify, request, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import json
+import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'eduquest-secret-key-2024'
@@ -341,69 +343,71 @@ def unlock_next_level():
 
 # ============== INITIALIZE DB ==============
 
+def scan_and_register_games(app):
+    """Scan the static/games directory for HTML files and register games based on embedded JSON metadata."""
+    print("Scanning for games...")
+    games_dir = os.path.join(app.root_path, 'static', 'games')
+    found_game_ids = set()
+    
+    for root, _, files in os.walk(games_dir):
+        for file in files:
+            if file.endswith('.html'):
+                file_path = os.path.join(root, file)
+                
+                # Calculate relative path for html_file property
+                rel_path = os.path.relpath(file_path, app.root_path)
+                # Replace backslashes with forward slashes for URLs
+                rel_path = rel_path.replace('\\', '/')
+                # Add leading slash
+                if not rel_path.startswith('/'):
+                    rel_path = '/' + rel_path
+                
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                    # Extract JSON metadata
+                    match = re.search(r'<script\s+id="game-metadata"\s+type="application/json">([\s\S]*?)</script>', content)
+                    if match:
+                        try:
+                            metadata_str = match.group(1).strip()
+                            metadata = json.loads(metadata_str)
+                            
+                            # Add/override html_file path
+                            metadata['html_file'] = rel_path
+                            
+                            # Register in database
+                            existing = GameMetadata.query.filter_by(game_id=metadata['game_id']).first()
+                            if existing:
+                                for key, value in metadata.items():
+                                    setattr(existing, key, value)
+                                existing.is_active = True
+                            else:
+                                game = GameMetadata(**metadata)
+                                db.session.add(game)
+                                
+                            found_game_ids.add(metadata['game_id'])
+                            print(f"Registered game: {metadata['game_id']} from {rel_path}")
+                        except json.JSONDecodeError as e:
+                            print(f"Error parsing JSON in {file_path}: {e}")
+                        except Exception as e:
+                            print(f"Error registering game from {file_path}: {e}")
+
+    # Deactivate games that are no longer in the filesystem
+    all_games = GameMetadata.query.all()
+    for game in all_games:
+        if game.game_id not in found_game_ids:
+            game.is_active = False
+            print(f"Deactivated game: {game.game_id} (file not found)")
+            
+    db.session.commit()
+    print(f"Total active games: {len(found_game_ids)}")
+
+
 def init_db():
     with app.app_context():
         db.create_all()
 
-        # Add some default games if none exist
-        if GameMetadata.query.count() == 0:
-            default_games = [
-                {
-                    'game_id': 'math-placevalue-1',
-                    'title': 'Balloon Pop',
-                    'subject': 'math',
-                    'level': 1,
-                    'concept': 'Place Values',
-                    'description': 'Pop balloons to find the correct digit based on place value!',
-                    'instructions': 'Pop the balloon with the digit that matches the requested place value.',
-                    'pass_threshold': 70,
-                    'min_age': 5,
-                    'html_file': 'static/games/math/placevalue-level1.html'
-                },
-                {
-                    'game_id': 'math-descending-2',
-                    'title': 'Balloon Order',
-                    'subject': 'math',
-                    'level': 2,
-                    'concept': 'Ascending/Descending',
-                    'description': 'Pop balloons in ascending or descending order!',
-                    'instructions': 'Pop the balloons in the correct order as shown.',
-                    'pass_threshold': 70,
-                    'min_age': 6,
-                    'html_file': 'static/games/math/descending-level2.html'
-                },
-                {
-                    'game_id': 'math-subtraction-2',
-                    'title': 'Minus Monster',
-                    'subject': 'math',
-                    'level': 2,
-                    'concept': 'Subtraction',
-                    'description': 'Master subtraction with engaging gameplay!',
-                    'instructions': 'Find the correct answer to complete the subtraction.',
-                    'pass_threshold': 70,
-                    'min_age': 6,
-                    'html_file': 'games/math/subtraction-level2.html'
-                },
-                {
-                    'game_id': 'science-animals-1',
-                    'title': 'Animal Kingdom',
-                    'subject': 'science',
-                    'level': 1,
-                    'concept': 'Animal Types',
-                    'description': 'Learn about different animals and their homes!',
-                    'instructions': 'Match animals to their correct category.',
-                    'pass_threshold': 70,
-                    'min_age': 5,
-                    'html_file': 'games/science/animals-level1.html'
-                }
-            ]
-
-            for game_data in default_games:
-                game = GameMetadata(**game_data)
-                db.session.add(game)
-
-            db.session.commit()
-            print("Default games added to database!")
+        scan_and_register_games(app)
 
 
 if __name__ == '__main__':

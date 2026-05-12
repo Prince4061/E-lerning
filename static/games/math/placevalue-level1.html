@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script id="game-metadata" type="application/json">
+    {
+      "game_id": "math-placevalue-1",
+      "title": "Balloon Pop",
+      "subject": "math",
+      "level": 1,
+      "concept": "Place Values",
+      "description": "Pop balloons to find the correct digit based on place value!",
+      "instructions": "Pop the balloon with the digit that matches the requested place value (Ones, Tens, or Hundreds). You have 3 lives. Get 70% or more to pass!",
+      "pass_threshold": 70,
+      "min_age": 5
+    }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Balloon Math Shooter</title>
@@ -471,6 +484,7 @@
 
     function endGame() {
         gameState = 'gameover';
+        if (gameInterval) clearInterval(gameInterval);
         hudEl.classList.add('hidden');
         gameoverEl.classList.remove('hidden');
         document.getElementById('finalScore').innerText = score;

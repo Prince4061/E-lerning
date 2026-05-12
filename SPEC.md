@@ -46,7 +46,7 @@ Playful educational - soft rounded shapes, cartoon-style elements, bright but no
 
 ### Flow
 ```
-Welcome Screen → Profile Setup (name/age) → Subject Selection → Level Hub → Game Play → Results → Next Level/Replay
+Welcome Screen → Profile Setup/Login → Home Screen (Dashboard) → Subject Selection → Level Hub → Game Play → Results → Next Level/Replay
 ```
 
 ### Screens
@@ -111,12 +111,12 @@ Welcome Screen → Profile Setup (name/age) → Subject Selection → Level Hub 
    - Star rating: 1-2 stars (<90%), 3 stars (90%+)
    - Progress persisted in localStorage
 
-4. **Game Module System (Scalable Architecture)**
-   - `gameRegistry.js` - Central registry of all games
-   - Each game is a self-contained HTML file
-   - Shared API: `EduQuest.loadGame(gameId)`, `EduQuest.submitScore(score)`
+4. **Game Module System (Auto-Discovery Architecture)**
+   - Backend auto-scans the `static/games/` directory on startup.
+   - Each game is a self-contained HTML file with embedded JSON metadata (`<script id="game-metadata">`).
+   - Games are automatically registered into the SQLite database based on the files present.
+   - Shared API: `EduQuest.submitScore(score)`, `EduQuest.endGame()`
    - Common CSS variables and components
-   - Games register themselves on load
 
 5. **Scoring & Rewards**
    - Real-time score updates
@@ -182,7 +182,7 @@ Welcome Screen → Profile Setup (name/age) → Subject Selection → Level Hub 
 /
 ├── index.html              (Main hub - loads games)
 ├── game-loader.js          (Central game loading system)
-├── game-registry.js        (Game metadata & registration)
+├── game-registry.js        (Fetches games from backend)
 ├── styles/
 │   └── main.css            (Shared styles, CSS variables)
 ├── components/
@@ -207,20 +207,22 @@ Welcome Screen → Profile Setup (name/age) → Subject Selection → Level Hub 
         └── ...
 ```
 
-### Game Registry Pattern
-```javascript
-// Each game file will call this to register:
-EduQuest.registerGame({
-  id: 'math-addition-1',
-  title: 'Number Ninja',
-  subject: 'math',
-  level: 1,
-  concept: 'Basic Addition',
-  minAge: 5,
-  html: 'games/math/level1-addition.html',
-  js: 'games/math/level1-addition.js',
-  passThreshold: 70
-});
+### Game Auto-Discovery Pattern
+```html
+<!-- Each game file includes this metadata in its <head> to be discovered by app.py: -->
+<script id="game-metadata" type="application/json">
+{
+  "game_id": "math-addition-1",
+  "title": "Number Ninja",
+  "subject": "math",
+  "level": 1,
+  "concept": "Basic Addition",
+  "description": "Learn to add numbers with fun challenges!",
+  "instructions": "Solve the addition problems.",
+  "pass_threshold": 70,
+  "min_age": 5
+}
+</script>
 ```
 
 ### Game API (Shared Interface)
