@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <script id="game-metadata" type="application/json">
     {
@@ -15,356 +16,561 @@
     }
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Balloon Math Shooter</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;700&display=swap"
+        rel="stylesheet">
+
     <style>
         body {
             font-family: 'Quicksand', sans-serif;
             overflow: hidden;
-            background: #87CEEB; /* Sky Blue */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             user-select: none;
-            touch-action: manipulation;
+            touch-action: none;
+            /* Prevent pull-to-refresh on mobile */
         }
+
         .title-font {
             font-family: 'Fredoka One', cursive;
         }
+
         .balloon {
             position: absolute;
             cursor: crosshair;
-            transition: transform 0.1s;
             display: flex;
             align-items: center;
             justify-content: center;
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.2));
+            will-change: transform;
+            /* Performance optimization */
+            transform-origin: bottom center;
         }
+
         .balloon:active {
-            transform: scale(0.9);
+            transform: scale(0.9) !important;
         }
+
+        .balloon:hover {
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3)) brightness(1.1);
+        }
+
         .pop-animation {
-            animation: pop 0.3s ease-out forwards;
+            animation: pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+
         @keyframes pop {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.4); opacity: 0.5; }
-            100% { transform: scale(0); opacity: 0; }
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
         }
+
         .cloud {
             position: absolute;
-            background: white;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(200, 200, 255, 0.1) 100%);
             border-radius: 50px;
-            opacity: 0.8;
+            opacity: 0.3;
             pointer-events: none;
             z-index: 0;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
         }
-        .cloud::before, .cloud::after {
+
+        .cloud::before,
+        .cloud::after {
             content: '';
             position: absolute;
-            background: white;
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 50%;
         }
+
         .game-canvas {
             position: relative;
             width: 100%;
             height: 100%;
             min-height: 100vh;
             overflow: hidden;
-            background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%);
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
         }
-        .hud {
-            text-shadow: 2px 2px 0px rgba(255,255,255,0.5);
-        }
+
         .glass {
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(8px);
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 20px;
         }
+
+        .heart {
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-5px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .lives-glow {
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        @keyframes flashFade {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.5);
+            }
+        }
+
+        @keyframes feedbackPop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+
+            15% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+
+            85% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+        }
+
+        .animate-feedback {
+            animation: feedbackPop 0.8s ease-out forwards;
+        }
     </style>
 </head>
+
 <body>
 
-<div id="app" class="game-canvas">
-    <!-- Menu Screen -->
-    <div id="menu" class="absolute inset-0 z-50 flex items-center justify-center p-4">
-        <div class="glass max-w-md w-full p-8 text-center shadow-2xl">
-            <h1 class="title-font text-5xl text-blue-600 mb-4 tracking-wider">Balloon Pop!</h1>
-            <p class="text-xl text-blue-800 mb-8 font-bold">Master your Place Values (Ones, Tens, Hundreds)</p>
-            <button onclick="startGame()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 title-font text-2xl py-4 px-10 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">
-                START GAME 🎈
-            </button>
-        </div>
-    </div>
+    <div id="app" class="game-canvas">
+        <!-- Menu Screen -->
+        <div id="menu" class="absolute inset-0 z-50 flex items-center justify-center p-4">
+            <div class="glass max-w-md w-full p-8 text-center shadow-2xl rounded-3xl">
+                <div class="text-7xl mb-4 float-anim">🎈</div>
+                <h1 class="title-font text-5xl text-white mb-4 tracking-wider drop-shadow-lg">Balloon Pop!</h1>
+                <p class="text-xl text-blue-200 mb-8 font-bold">Master your Place Values<br>(Ones, Tens, Hundreds)</p>
 
-    <!-- HUD -->
-    <div id="hud" class="hidden absolute top-0 left-0 w-full p-4 z-40 flex justify-between items-start pointer-events-none">
-        <div class="hud flex flex-col gap-2">
-            <div class="bg-white/80 px-4 py-2 rounded-full shadow-md text-blue-600 font-bold text-xl">
-                Score: <span id="scoreVal">0</span>
-            </div>
-            <div class="bg-white/80 px-4 py-2 rounded-full shadow-md text-purple-600 font-bold text-xl">
-                Level: <span id="levelVal">1</span>
-            </div>
-        </div>
-        
-        <div class="flex-1 flex justify-center px-4">
-            <div class="glass px-8 py-4 text-center pointer-events-auto">
-                <div id="questionText" class="text-2xl font-bold text-gray-800 mb-1">...</div>
-                <div id="targetNumber" class="title-font text-5xl text-blue-600">000</div>
-            </div>
-        </div>
+                <div class="bg-white/20 rounded-xl p-4 mb-6 text-left">
+                    <p class="text-white font-bold mb-2 text-center">🎮 How to Play:</p>
+                    <p class="text-blue-100 text-sm text-center">Pop the balloon with the correct digit based on the
+                        requested place value!</p>
+                    <div class="flex justify-center gap-4 mt-3">
+                        <span
+                            class="bg-red-500/40 border border-red-400 px-3 py-1 rounded-full text-white text-sm font-bold shadow-sm">❤️
+                            3 Lives</span>
+                        <span
+                            class="bg-purple-500/40 border border-purple-400 px-3 py-1 rounded-full text-white text-sm font-bold shadow-sm">⏱️
+                            60 Sec</span>
+                    </div>
+                </div>
 
-        <div class="hud text-right">
-            <div id="timerBox" class="bg-white/80 px-4 py-2 rounded-full shadow-md text-red-600 font-bold text-2xl w-24 text-center">
-                <span id="timerVal">60</span>s
+                <button onclick="startGame()"
+                    class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-yellow-900 title-font text-2xl py-4 px-10 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 w-full md:w-auto">
+                    START GAME
+                </button>
             </div>
         </div>
-    </div>
 
-    <!-- Game Over Screen -->
-    <div id="gameover" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4">
-        <div class="glass max-w-md w-full p-8 text-center shadow-2xl">
-            <h2 class="title-font text-4xl text-red-600 mb-4">Time's Up!</h2>
-            <div class="text-6xl mb-4">🏆</div>
-            <p class="text-2xl text-blue-800 mb-2">Final Score</p>
-            <p id="finalScore" class="title-font text-6xl text-blue-600 mb-8">0</p>
-            <button onclick="startGame()" class="bg-blue-500 hover:bg-blue-600 text-white title-font text-2xl py-4 px-10 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">
-                PLAY AGAIN
-            </button>
+        <!-- Responsive HUD -->
+        <div id="hud"
+            class="hidden absolute top-0 left-0 w-full p-3 md:p-4 z-40 flex flex-wrap justify-between items-start pointer-events-none">
+
+            <!-- Left Side: Stats -->
+            <div class="flex flex-col gap-2 pointer-events-auto w-1/2 md:w-auto">
+                <div
+                    class="bg-white/90 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-lg text-blue-600 font-bold text-sm md:text-xl flex items-center gap-2 w-max border-2 border-blue-200">
+                    <span>⭐</span> Score: <span id="scoreVal">0</span>
+                </div>
+                <div
+                    class="bg-white/90 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-lg text-purple-600 font-bold text-sm md:text-xl w-max border-2 border-purple-200">
+                    Level: <span id="levelVal">1</span>
+                </div>
+                <div id="livesContainer"
+                    class="bg-white/90 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-lg flex items-center gap-1 w-max border-2 border-red-200 transition-all">
+                    <div id="livesHearts" class="flex gap-1">
+                        <span class="heart text-lg md:text-2xl">❤️</span>
+                        <span class="heart text-lg md:text-2xl">❤️</span>
+                        <span class="heart text-lg md:text-2xl">❤️</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Timer -->
+            <div class="text-right pointer-events-auto w-1/2 md:w-auto flex justify-end">
+                <div id="timerBox"
+                    class="bg-white/90 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-lg text-red-600 font-bold text-lg md:text-2xl w-20 md:w-28 text-center border-2 border-red-200 transition-all duration-300">
+                    <span id="timerVal">60</span>s
+                </div>
+            </div>
+
+            <!-- Center: Question -->
+            <div
+                class="w-full md:w-auto md:absolute md:left-1/2 md:-translate-x-1/2 mt-4 md:mt-0 flex justify-center pointer-events-auto z-10">
+                <div class="glass px-6 md:px-10 py-3 md:py-5 text-center shadow-xl">
+                    <div id="questionText" class="text-lg md:text-2xl font-bold text-white mb-1 drop-shadow-md">...
+                    </div>
+                    <div id="targetNumber"
+                        class="title-font text-5xl md:text-6xl text-yellow-300 drop-shadow-lg tracking-wider">000</div>
+                </div>
+            </div>
+
         </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover"
+            class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div
+                class="glass max-w-md w-full p-8 text-center shadow-2xl rounded-3xl bg-gradient-to-b from-white/30 to-white/10">
+                <div id="gameoverIcon" class="text-8xl mb-2 float-anim">🎈</div>
+                <h2 id="gameoverTitle" class="title-font text-5xl text-white drop-shadow-md mb-2">Game Over!</h2>
+                <p class="text-xl text-blue-100 font-bold mb-1">Final Score</p>
+                <p id="finalScore" class="title-font text-7xl text-yellow-300 drop-shadow-lg mb-6">0</p>
+
+                <div class="flex justify-center gap-4 md:gap-6 mb-8">
+                    <div class="bg-white/20 border border-white/30 rounded-xl p-3 w-28">
+                        <p class="text-2xl mb-1">❤️</p>
+                        <p id="finalLives" class="font-bold text-white tracking-widest text-sm">❤️❤️❤️</p>
+                        <p class="text-xs text-blue-100 mt-1 uppercase font-bold">Lives Left</p>
+                    </div>
+                    <div class="bg-white/20 border border-white/30 rounded-xl p-3 w-28">
+                        <p class="text-2xl mb-1">📊</p>
+                        <p id="finalLevel" class="title-font text-2xl text-white">1</p>
+                        <p class="text-xs text-blue-100 mt-1 uppercase font-bold">Level</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button onclick="startGame()"
+                        class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 text-white title-font text-2xl py-4 px-10 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 border-2 border-white/20">
+                        🔄 PLAY AGAIN
+                    </button>
+                    <button onclick="exitGame()"
+                        class="bg-white/10 hover:bg-white/20 text-white font-bold text-lg py-3 px-8 rounded-full shadow-md transform transition hover:scale-105 active:scale-95 border border-white/30">
+                        ← Back to Hub
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Message (Hidden initially) -->
+        <div id="feedback"
+            class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 text-center w-full">
+        </div>
+
+        <!-- Layers for dynamic elements -->
+        <div id="clouds-layer" class="absolute inset-0 pointer-events-none z-0"></div>
+        <div id="balloons-layer" class="absolute inset-0 z-20 pointer-events-none"></div>
     </div>
 
-    <!-- Feedback Message -->
-    <div id="feedback" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-5xl title-font z-50 opacity-0 transition-all duration-300">
-        CORRECT!
-    </div>
+    <script>
+        // --- Audio Synthesis (Safe Initialization) ---
+        let audioCtx = null;
 
-    <!-- Layers for dynamic elements -->
-    <div id="clouds-layer" class="absolute inset-0 pointer-events-none"></div>
-    <div id="balloons-layer" class="absolute inset-0"></div>
-</div>
-
-<script>
-    // --- Audio Synthesis ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    function playSound(type) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        const now = audioCtx.currentTime;
-
-        if (type === 'pop') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'correct') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(523.25, now); // C5
-            osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.2); // C6
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } else if (type === 'wrong') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        }
-    }
-
-    // --- Game Variables ---
-    let gameState = 'menu';
-    let score = 0;
-    let level = 1;
-    let timer = 60;
-    let gameInterval;
-    let currentTask = null;
-    let balloons = [];
-    let balloonIdCounter = 0;
-    let lastLevelUpScore = 0;
-
-    const balloonColors = [
-        '#FF5252', '#FF4081', '#E040FB', '#7C4DFF', 
-        '#536DFE', '#448AFF', '#40C4FF', '#18FFFF', 
-        '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41', 
-        '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40'
-    ];
-
-    const placeValueNames = ['ones', 'tens', 'hundreds'];
-
-    // --- UI Elements ---
-    const menuEl = document.getElementById('menu');
-    const hudEl = document.getElementById('hud');
-    const gameoverEl = document.getElementById('gameover');
-    const scoreValEl = document.getElementById('scoreVal');
-    const levelValEl = document.getElementById('levelVal');
-    const timerValEl = document.getElementById('timerVal');
-    const questionTextEl = document.getElementById('questionText');
-    const targetNumberEl = document.getElementById('targetNumber');
-    const balloonsLayer = document.getElementById('balloons-layer');
-    const cloudsLayer = document.getElementById('clouds-layer');
-    const feedbackEl = document.getElementById('feedback');
-
-    // --- Setup Background Clouds ---
-    function initClouds() {
-        cloudsLayer.innerHTML = '';
-        for (let i = 0; i < 6; i++) {
-            createCloud();
-        }
-    }
-
-    function createCloud() {
-        const cloud = document.createElement('div');
-        cloud.className = 'cloud';
-        const w = 100 + Math.random() * 100;
-        const h = w * 0.4;
-        cloud.style.width = w + 'px';
-        cloud.style.height = h + 'px';
-        cloud.style.left = (Math.random() * 120 - 10) + 'vw';
-        cloud.style.top = (Math.random() * 80) + 'vh';
-        
-        // Add cloud puffs
-        const before = document.createElement('div');
-        before.style.width = (w*0.6) + 'px';
-        before.style.height = (w*0.6) + 'px';
-        before.style.top = -(w*0.3) + 'px';
-        before.style.left = (w*0.1) + 'px';
-        before.className = 'absolute bg-white rounded-full';
-        
-        const after = document.createElement('div');
-        after.style.width = (w*0.5) + 'px';
-        after.style.height = (w*0.5) + 'px';
-        after.style.top = -(w*0.2) + 'px';
-        after.style.left = (w*0.4) + 'px';
-        after.className = 'absolute bg-white rounded-full';
-
-        cloud.appendChild(before);
-        cloud.appendChild(after);
-        cloudsLayer.appendChild(cloud);
-
-        // Slow drift
-        let pos = parseFloat(cloud.style.left);
-        const speed = 0.02 + Math.random() * 0.05;
-        function drift() {
-            if (gameState === 'playing' || gameState === 'menu') {
-                pos += speed;
-                if (pos > 110) pos = -20;
-                cloud.style.left = pos + 'vw';
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            requestAnimationFrame(drift);
-        }
-        drift();
-    }
-
-    // --- Game Logic ---
-    function startGame() {
-        gameState = 'playing';
-        score = 0;
-        level = 1;
-        timer = 60;
-        balloons = [];
-        balloonsLayer.innerHTML = '';
-        
-        menuEl.classList.add('hidden');
-        gameoverEl.classList.add('hidden');
-        hudEl.classList.remove('hidden');
-        
-        updateHUD();
-        nextQuestion();
-        
-        if (gameInterval) clearInterval(gameInterval);
-        gameInterval = setInterval(gameTick, 1000);
-
-        spawnInitialBalloons();
-        requestAnimationFrame(gameLoop);
-    }
-
-    function gameTick() {
-        if (timer > 0) {
-            timer--;
-            updateHUD();
-        } else {
-            endGame();
-        }
-    }
-
-    function updateHUD() {
-        scoreValEl.innerText = score;
-        levelValEl.innerText = level;
-        timerValEl.innerText = timer;
-    }
-
-    function nextQuestion() {
-        // Generate number based on level
-        let num;
-        let placeIdx;
-
-        if (level === 1) {
-            num = Math.floor(10 + Math.random() * 90); // 2-digit
-            placeIdx = Math.floor(Math.random() * 2); 
-        } else {
-            num = Math.floor(100 + Math.random() * 900); // 3-digit
-            placeIdx = Math.floor(Math.random() * 3);
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
 
-        const placeNamesDisplay = ['Ones', 'Tens', 'Hundreds'];
-        const placeName = placeNamesDisplay[placeIdx];
-        const numStr = num.toString().padStart(3, '0');
-        const targetDigit = numStr[numStr.length - 1 - placeIdx];
+        function playSound(type) {
+            if (!audioCtx) return;
 
-        currentTask = {
-            number: num,
-            placeName: placeName,
-            targetDigit: targetDigit
-        };
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
 
-        questionTextEl.innerText = `Shoot the ${placeName} digit in:`;
-        targetNumberEl.innerText = num;
-        
-        // Clear logic to ensure the correct digit balloon exists
-        ensureTargetExists(targetDigit);
-    }
+                const now = audioCtx.currentTime;
 
-    function ensureTargetExists(digit) {
-        const exists = balloons.some(b => b.value === digit && !b.popping);
-        if (!exists) {
-            createBalloon(digit);
+                if (type === 'pop') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(20, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.2); // C6
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch (e) {
+                console.warn("Audio play failed:", e);
+            }
         }
-    }
 
-    function spawnInitialBalloons() {
-        for (let i = 0; i < 6; i++) {
-            createBalloon();
+        // --- Game Variables ---
+        let gameState = 'menu';
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+        const maxLives = 3;
+        let timer = 60;
+        let gameInterval;
+        let currentTask = null;
+        let balloons = [];
+        let balloonIdCounter = 0;
+        let lastLevelUpScore = 0;
+
+        let totalAttempts = 0;
+        let correctAttempts = 0;
+
+        const balloonColors = [
+            '#FF5252', '#FF4081', '#E040FB', '#7C4DFF',
+            '#536DFE', '#448AFF', '#40C4FF', '#18FFFF',
+            '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41',
+            '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40'
+        ];
+
+        const menuEl = document.getElementById('menu');
+        const hudEl = document.getElementById('hud');
+        const gameoverEl = document.getElementById('gameover');
+        const scoreValEl = document.getElementById('scoreVal');
+        const levelValEl = document.getElementById('levelVal');
+        const timerValEl = document.getElementById('timerVal');
+        const timerBox = document.getElementById('timerBox');
+        const questionTextEl = document.getElementById('questionText');
+        const targetNumberEl = document.getElementById('targetNumber');
+        const balloonsLayer = document.getElementById('balloons-layer');
+        const cloudsLayer = document.getElementById('clouds-layer');
+        const feedbackEl = document.getElementById('feedback');
+        const livesHeartsEl = document.getElementById('livesHearts');
+
+        // --- UI Update Utilities ---
+        function updateLivesDisplay() {
+            livesHeartsEl.innerHTML = '';
+            for (let i = 0; i < maxLives; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'text-lg md:text-2xl transition-all duration-300';
+                if (i < lives) {
+                    heart.textContent = '❤️';
+                    heart.style.transform = 'scale(1)';
+                } else {
+                    heart.textContent = '🖤';
+                    heart.style.transform = 'scale(0.8)';
+                    heart.style.opacity = '0.5';
+                }
+                livesHeartsEl.appendChild(heart);
+            }
         }
-    }
 
-    function createBalloon(forcedValue = null) {
-        const id = balloonIdCounter++;
-        const value = forcedValue !== null ? forcedValue : Math.floor(Math.random() * 10).toString();
-        const color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
-        
-        const el = document.createElement('div');
-        el.className = 'balloon';
-        el.id = `bal-${id}`;
-        
-        const size = 80 + Math.random() * 40;
-        el.style.width = size + 'px';
-        el.style.height = (size * 1.2) + 'px';
+        function loseLife() {
+            lives--;
+            updateLivesDisplay();
 
-        el.innerHTML = `
-            <svg viewBox="0 0 100 120" width="100%" height="100%">
+            const livesContainer = document.getElementById('livesContainer');
+            livesContainer.classList.add('animate-shake', 'lives-glow');
+            setTimeout(() => {
+                livesContainer.classList.remove('animate-shake', 'lives-glow');
+            }, 500);
+
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        function showFeedback(text, colorClass) {
+            feedbackEl.innerText = text;
+            feedbackEl.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-5xl md:text-7xl title-font z-50 drop-shadow-2xl text-center w-full animate-feedback ${colorClass}`;
+
+            // Force reflow to restart animation reliably
+            feedbackEl.classList.remove('hidden');
+            void feedbackEl.offsetWidth;
+
+            // Screen flash effect
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: ${colorClass.includes('green') ? 'rgba(76, 203, 113, 0.25)' : 'rgba(255, 107, 107, 0.25)'};
+            pointer-events: none;
+            z-index: 100;
+            animation: flashFade 0.4s ease-out forwards;
+        `;
+            document.body.appendChild(flash);
+
+            setTimeout(() => {
+                flash.remove();
+            }, 400);
+        }
+
+        // --- Background Setup ---
+        function initClouds() {
+            cloudsLayer.innerHTML = '';
+            // Add stars background
+            for (let i = 0; i < 40; i++) {
+                const star = document.createElement('div');
+                star.style.cssText = `
+                position: absolute;
+                width: ${2 + Math.random() * 3}px;
+                height: ${2 + Math.random() * 3}px;
+                background: white;
+                border-radius: 50%;
+                left: ${Math.random() * 100}vw;
+                top: ${Math.random() * 100}vh;
+                opacity: ${0.2 + Math.random() * 0.6};
+                animation: twinkle ${2 + Math.random() * 4}s ease-in-out infinite;
+            `;
+                cloudsLayer.appendChild(star);
+            }
+
+            for (let i = 0; i < 5; i++) {
+                createCloud();
+            }
+        }
+
+        function createCloud() {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            const w = 100 + Math.random() * 150;
+            const h = w * 0.4;
+            cloud.style.width = w + 'px';
+            cloud.style.height = h + 'px';
+            cloud.style.left = (Math.random() * 120 - 10) + 'vw';
+            cloud.style.top = (Math.random() * 80) + 'vh';
+
+            const before = document.createElement('div');
+            before.style.width = (w * 0.6) + 'px';
+            before.style.height = (w * 0.6) + 'px';
+            before.style.top = -(w * 0.3) + 'px';
+            before.style.left = (w * 0.1) + 'px';
+            before.className = 'absolute bg-white/80 rounded-full';
+
+            const after = document.createElement('div');
+            after.style.width = (w * 0.5) + 'px';
+            after.style.height = (w * 0.5) + 'px';
+            after.style.top = -(w * 0.2) + 'px';
+            after.style.left = (w * 0.4) + 'px';
+            after.className = 'absolute bg-white/80 rounded-full';
+
+            cloud.appendChild(before);
+            cloud.appendChild(after);
+            cloudsLayer.appendChild(cloud);
+
+            let pos = parseFloat(cloud.style.left);
+            const speed = 0.01 + Math.random() * 0.03;
+            function drift() {
+                if (gameState === 'playing' || gameState === 'menu') {
+                    pos += speed;
+                    if (pos > 110) pos = -20;
+                    cloud.style.left = pos + 'vw';
+                }
+                requestAnimationFrame(drift);
+            }
+            drift();
+        }
+
+        // --- Balloon Logic ---
+        function createBalloon(forcedValue = null, forceVisible = false) {
+            const id = balloonIdCounter++;
+            const value = forcedValue !== null ? forcedValue : Math.floor(Math.random() * 10).toString();
+            const color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
+
+            const el = document.createElement('div');
+            el.className = 'balloon pointer-events-auto';
+            el.id = `bal-${id}`;
+
+            // Responsive scaling
+            const baseSize = window.innerWidth < 600 ? 65 : 80;
+            const size = baseSize + Math.random() * 30;
+            el.style.width = size + 'px';
+            el.style.height = (size * 1.2) + 'px';
+
+            // Draw shadow directly in SVG for cross-browser consistency
+            el.innerHTML = `
+            <svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="none">
                 <defs>
                     <radialGradient id="grad-${id}" cx="40%" cy="40%" r="50%">
                         <stop offset="0%" style="stop-color:white; stop-opacity:0.4" />
@@ -373,159 +579,360 @@
                 </defs>
                 <path d="M50,10 C20,10 5,35 5,60 C5,85 20,105 50,115 C80,105 95,85 95,60 C95,35 80,10 50,10 Z" fill="${color}" />
                 <path d="M50,10 C20,10 5,35 5,60 C5,85 20,105 50,115 C80,105 95,85 95,60 C95,35 80,10 50,10 Z" fill="url(#grad-${id})" />
-                <!-- String -->
-                <path d="M50,115 Q45,125 50,135" stroke="#555" fill="none" stroke-width="2" />
-                <text x="50" y="70" text-anchor="middle" font-family="'Fredoka One'" font-size="40" fill="white" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.3)">${value}</text>
+                <path d="M50,115 Q45,125 50,135" stroke="#fff" fill="none" stroke-width="2" opacity="0.6" />
+                <text x="52" y="72" text-anchor="middle" font-family="'Fredoka One', sans-serif" font-size="42" fill="rgba(0,0,0,0.3)">${value}</text>
+                <text x="50" y="70" text-anchor="middle" font-family="'Fredoka One', sans-serif" font-size="42" fill="white">${value}</text>
             </svg>
         `;
 
-        el.addEventListener('mousedown', (e) => handlePop(id, e));
-        el.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handlePop(id, e);
-        });
+            el.addEventListener('mousedown', (e) => handlePop(id, e));
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevents emulated mouse events
+                handlePop(id, e);
+            }, { passive: false });
 
-        balloonsLayer.appendChild(el);
+            balloonsLayer.appendChild(el);
 
-        const balloonObj = {
-            id,
-            el,
-            value,
-            x: Math.random() * (window.innerWidth - size),
-            y: window.innerHeight + 100,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -(1.5 + Math.random() * (1 + level * 0.5)),
-            size,
-            popping: false
-        };
+            // Positioning
+            let startY = window.innerHeight + 100 + Math.random() * 100;
+            let velY = -(1.5 + Math.random() * (1 + level * 0.3));
 
-        balloons.push(balloonObj);
-    }
-
-    function handlePop(id, event) {
-        if (gameState !== 'playing') return;
-        
-        const b = balloons.find(x => x.id === id);
-        if (!b || b.popping) return;
-
-        b.popping = true;
-        playSound('pop');
-        b.el.classList.add('pop-animation');
-
-        if (b.value === currentTask.targetDigit) {
-            // Correct!
-            score += 10;
-            showFeedback('EXCELLENT!', 'text-green-500');
-            playSound('correct');
-            
-            // Check for level up
-            if (score >= lastLevelUpScore + 50) {
-                level++;
-                lastLevelUpScore = score;
-                showFeedback('LEVEL UP!', 'text-yellow-500');
+            // Fix: Spawn inside visible bounds if desperately needed
+            if (forceVisible) {
+                startY = window.innerHeight * 0.2 + Math.random() * (window.innerHeight * 0.5);
+                velY = -(0.5 + Math.random() * 1); // Float slower
             }
-            
+
+            const balloonObj = {
+                id, el, value,
+                x: 20 + Math.random() * (window.innerWidth - size - 40),
+                y: startY,
+                vx: (Math.random() - 0.5) * 2.5,
+                vy: velY,
+                size,
+                popping: false
+            };
+
+            // Setup initial transform to prevent flicker
+            el.style.transform = `translate(${balloonObj.x}px, ${balloonObj.y}px)`;
+            balloons.push(balloonObj);
+        }
+
+        function ensureTargetExists(digit) {
+            // Find if target exists within playable screen bounds
+            const exists = balloons.some(b => b.value === digit && !b.popping && b.y > -50 && b.y < window.innerHeight + 50);
+            if (!exists) {
+                // Force it to spawn where the user can actually click it soon!
+                createBalloon(digit, true);
+            }
+        }
+
+        function handlePop(id, event) {
+            if (gameState !== 'playing') return;
+            initAudio(); // Backup init for iOS
+
+            const b = balloons.find(x => x.id === id);
+            if (!b || b.popping) return;
+
+            b.popping = true;
+            playSound('pop');
+            b.el.classList.add('pop-animation');
+
+            if (b.value === currentTask.targetDigit) {
+                // Correct
+                totalAttempts++;
+                correctAttempts++;
+                score += 10;
+                showFeedback('EXCELLENT!', 'text-green-400');
+                playSound('correct');
+
+                // Trigger confetti relative to the balloon that just popped
+                maybeTriggerConfetti(b.x + b.size / 2, b.y + b.size / 2);
+
+                if (score >= lastLevelUpScore + 50) {
+                    level++;
+                    lastLevelUpScore = score;
+                    setTimeout(() => showFeedback('LEVEL UP!', 'text-yellow-400'), 800);
+                }
+
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'gameScore', value: 10 }, '*');
+                }
+
+                updateHUD();
+                nextQuestion();
+            } else {
+                // Wrong
+                totalAttempts++;
+                loseLife();
+                score = Math.max(0, score - 5);
+                showFeedback('WRONG!', 'text-red-400');
+                playSound('wrong');
+                updateHUD();
+
+                if (lives > 0) {
+                    ensureTargetExists(currentTask.targetDigit);
+                }
+            }
+
+            setTimeout(() => {
+                if (b.el.parentNode) b.el.remove();
+            }, 300);
+        }
+
+        function createConfetti(x, y, count = 40) {
+            const colors = ['#FF5252', '#FF4081', '#E040FB', '#448AFF', '#18FFFF', '#69F0AE', '#FFFF00', '#FFD740'];
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.cssText = `
+                position: fixed; left: ${x}px; top: ${y}px;
+                width: ${5 + Math.random() * 8}px; height: ${5 + Math.random() * 8}px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                pointer-events: none; z-index: 9999;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            `;
+                document.body.appendChild(confetti);
+
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 4 + Math.random() * 8;
+                const vx = Math.cos(angle) * velocity;
+                let vy = Math.sin(angle) * velocity - 6;
+                const rotationSpeed = (Math.random() - 0.5) * 15;
+
+                let posX = x, posY = y, rot = 0, opacity = 1;
+
+                function animateConfetti() {
+                    posX += vx;
+                    vy += 0.4; // gravity
+                    posY += vy;
+                    rot += rotationSpeed;
+                    opacity -= 0.015;
+
+                    confetti.style.transform = `translate(${posX - x}px, ${posY - y}px) rotate(${rot}deg)`;
+                    confetti.style.opacity = opacity;
+
+                    if (opacity > 0 && posY < window.innerHeight + 100) {
+                        requestAnimationFrame(animateConfetti);
+                    } else {
+                        confetti.remove();
+                    }
+                }
+                requestAnimationFrame(animateConfetti);
+            }
+        }
+
+        function maybeTriggerConfetti(x, y) {
+            if (Math.random() < 0.35) { // 35% chance on correct answer
+                createConfetti(x, y);
+            }
+        }
+
+        // --- Core Game Flow ---
+        function startGame() {
+            initAudio();
+            gameState = 'playing';
+            score = 0;
+            level = 1;
+            lives = maxLives;
+            timer = 60;
+            lastLevelUpScore = 0;
+            totalAttempts = 0;
+            correctAttempts = 0;
+
+            menuEl.classList.add('hidden');
+            gameoverEl.classList.add('hidden');
+            hudEl.classList.remove('hidden');
+
+            balloons.forEach(b => b.el.remove());
+            balloons = [];
+            balloonsLayer.innerHTML = '';
+
             updateHUD();
+            updateLivesDisplay();
             nextQuestion();
-        } else {
-            // Wrong digit
-            score = Math.max(0, score - 5);
-            showFeedback('TRY AGAIN!', 'text-red-500');
-            playSound('wrong');
-            updateHUD();
+
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameTick, 1000);
+
+            // Initial spawn
+            for (let i = 0; i < 6 + (window.innerWidth > 800 ? 3 : 0); i++) {
+                createBalloon();
+            }
+
+            requestAnimationFrame(gameLoop);
         }
 
-        setTimeout(() => {
-            b.el.remove();
-            balloons = balloons.filter(x => x.id !== id);
-        }, 300);
-    }
+        function nextQuestion() {
+            let num;
+            let placeIdx;
 
-    function showFeedback(text, colorClass) {
-        feedbackEl.innerText = text;
-        feedbackEl.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-6xl title-font z-50 transition-all duration-300 ${colorClass} opacity-100 scale-125`;
-        
-        setTimeout(() => {
-            feedbackEl.classList.replace('opacity-100', 'opacity-0');
-            feedbackEl.classList.remove('scale-125');
-        }, 600);
-    }
-
-    function gameLoop() {
-        if (gameState !== 'playing') return;
-
-        balloons.forEach(b => {
-            if (b.popping) return;
-
-            b.x += b.vx;
-            b.y += b.vy;
-
-            // Bounce off walls
-            if (b.x <= 0 || b.x >= window.innerWidth - b.size) {
-                b.vx *= -1;
+            if (level === 1) {
+                num = Math.floor(10 + Math.random() * 90); // 2-digit (10-99)
+                placeIdx = Math.floor(Math.random() * 2);  // 0=Ones, 1=Tens
+            } else {
+                num = Math.floor(100 + Math.random() * 900); // 3-digit (100-999)
+                placeIdx = Math.floor(Math.random() * 3);  // 0=Ones, 1=Tens, 2=Hundreds
             }
 
-            b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+            const placeNamesDisplay = ['Ones', 'Tens', 'Hundreds'];
+            const placeName = placeNamesDisplay[placeIdx];
+            const numStr = num.toString();
+            const targetDigit = numStr[numStr.length - 1 - placeIdx];
 
-            // Recycle if gone off top
-            if (b.y < -200) {
-                b.el.remove();
-                balloons = balloons.filter(x => x.id !== b.id);
+            currentTask = { number: num, placeName, targetDigit };
+
+            questionTextEl.innerText = `Find the ${placeName} digit in:`;
+            targetNumberEl.innerText = num;
+
+            ensureTargetExists(targetDigit);
+        }
+
+        function updateHUD() {
+            scoreValEl.innerText = score;
+            levelValEl.innerText = level;
+            timerValEl.innerText = timer;
+
+            // Timer visual effects
+            if (timer <= 10 && timer > 0) {
+                timerBox.classList.add('scale-110', 'bg-red-100', 'border-red-500');
+                if (timer % 2 === 0) timerBox.classList.add('text-red-700');
+                else timerBox.classList.remove('text-red-700');
+            } else {
+                timerBox.classList.remove('scale-110', 'bg-red-100', 'border-red-500', 'text-red-700');
             }
+        }
+
+        function gameTick() {
+            if (gameState !== 'playing') return;
+            if (timer > 0) {
+                timer--;
+                updateHUD();
+            } else {
+                endGame();
+            }
+        }
+
+        function gameLoop() {
+            if (gameState !== 'playing') return;
+
+            // Iterate backwards for safe array removal
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                const b = balloons[i];
+                if (b.popping) continue;
+
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Bounce off walls smoothly
+                if (b.x <= 0) {
+                    b.x = 0;
+                    b.vx = Math.abs(b.vx);
+                } else if (b.x >= window.innerWidth - b.size) {
+                    b.x = window.innerWidth - b.size;
+                    b.vx = -Math.abs(b.vx);
+                }
+
+                b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+
+                // Remove if way off-top
+                if (b.y < -200) {
+                    if (b.el.parentNode) b.el.remove();
+                    balloons.splice(i, 1);
+                }
+            }
+
+            // Keep balloon count based on level and screen width
+            const maxBalloons = window.innerWidth > 800 ? 7 + level : 5 + Math.floor(level / 2);
+            if (balloons.length < maxBalloons) {
+                createBalloon();
+            }
+
+            // Keep checking if target is alive
+            if (currentTask && Math.random() < 0.05) {
+                ensureTargetExists(currentTask.targetDigit);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameState = 'gameover';
+            if (gameInterval) clearInterval(gameInterval);
+            hudEl.classList.add('hidden');
+            gameoverEl.classList.remove('hidden');
+
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalLevel').innerText = level;
+
+            let heartsStr = '';
+            for (let i = 0; i < maxLives; i++) {
+                heartsStr += (i < lives) ? '❤️' : '🖤';
+            }
+            document.getElementById('finalLives').innerText = heartsStr;
+
+            const gameoverTitle = document.getElementById('gameoverTitle');
+            const gameoverIcon = document.getElementById('gameoverIcon');
+            if (lives <= 0) {
+                gameoverTitle.innerText = 'No Lives Left!';
+                gameoverTitle.className = 'title-font text-5xl text-red-400 drop-shadow-md mb-2';
+                gameoverIcon.innerText = '💔';
+            } else {
+                gameoverTitle.innerText = "Time's Up!";
+                gameoverTitle.className = 'title-font text-5xl text-orange-400 drop-shadow-md mb-2';
+                gameoverIcon.innerText = '⏰';
+            }
+
+            if (window.parent !== window) {
+                const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
+                window.parent.postMessage({
+                    type: 'gameOver',
+                    score: score,
+                    livesLeft: lives,
+                    levelReached: level,
+                    accuracy: accuracy,
+                    totalAttempts: totalAttempts,
+                    correctAttempts: correctAttempts
+                }, '*');
+            }
+        }
+
+        function exitGame() {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'exitGame' }, '*');
+            } else {
+                // Fallback for standalone preview
+                location.reload();
+            }
+        }
+
+        // Window Resizing Fix
+        window.addEventListener('resize', () => {
+            // Push balloons inside bounds instead of clearing them
+            balloons.forEach(b => {
+                if (b.x > window.innerWidth - b.size) {
+                    b.x = window.innerWidth - b.size;
+                }
+            });
         });
 
-        // Keep balloon count up
-        if (balloons.length < 5 + level) {
-            createBalloon();
-        }
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    function endGame() {
-        gameState = 'gameover';
-        if (gameInterval) clearInterval(gameInterval);
-        hudEl.classList.add('hidden');
-        gameoverEl.classList.remove('hidden');
-        document.getElementById('finalScore').innerText = score;
-        balloonsLayer.innerHTML = '';
-        balloons = [];
-
-        // Send game over message to parent (EduQuest)
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'gameOver', score: score }, '*');
-        }
-    }
-
-    // Auto-start when loaded in EduQuest (for hub integration)
-    function math_placevalue_1_init() {
-        startGame();
-    }
-
-    // Listen for start message from parent
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'startGame') {
+        // Parent Hub Listeners
+        function math_placevalue_1_init() {
             startGame();
         }
-    });
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'startGame') {
+                startGame();
+            }
+        });
+        window.addEventListener('load', () => {
+            initClouds();
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'gameReady' }, '*');
+            }
+        });
 
-    // Notify parent that game is ready
-    window.addEventListener('load', () => {
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'gameReady' }, '*');
-        }
-    });
-
-    // Initialize environment
-    initClouds();
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        // Just clear balloons if screen changes too much to avoid glitches
-        balloons.forEach(b => b.el.remove());
-        balloons = [];
-    });
-
-</script>
+    </script>
 </body>
+
 </html>
