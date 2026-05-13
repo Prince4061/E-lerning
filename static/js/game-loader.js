@@ -84,9 +84,6 @@ const GameLoader = {
     });
   },
 
-  /**
-   * Update score display
-   */
   updateScore(points) {
     const scoreEl = document.getElementById('game-score');
     const currentScore = parseInt(scoreEl.textContent) || 0;
@@ -96,6 +93,20 @@ const GameLoader = {
     setTimeout(() => {
       scoreEl.parentElement.classList.remove('score-bump');
     }, 200);
+  },
+
+  /**
+   * Update lives display
+   */
+  updateLives(lives) {
+    const livesEl = document.getElementById('game-lives');
+    if (livesEl) {
+      livesEl.textContent = lives;
+      livesEl.parentElement.classList.add('score-bump');
+      setTimeout(() => {
+        livesEl.parentElement.classList.remove('score-bump');
+      }, 200);
+    }
   },
 
   /**
