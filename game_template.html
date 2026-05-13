@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Title</title>
+
+    <!-- 1. REQUIRED: Game Metadata for Auto-Discovery -->
+    <!-- AI को बताएँ कि यह JSON ब्लॉक हमेशा <head> में होना चाहिए -->
+    <script id="game-metadata" type="application/json">
+    {
+      "game_id": "math-your-unique-id", 
+      "title": "Your Game Title",
+      "subject": "math", 
+      "level": 1,
+      "concept": "Topic Name (e.g. Addition)",
+      "description": "Short description of the game.",
+      "instructions": "How to play instructions.",
+      "pass_threshold": 70,
+      "min_age": 5
+    }
+    </script>
+
+    <style>
+        /* यहाँ गेम की CSS आएगी (AI से जेनरेटेड) */
+        body {
+            font-family: 'Nunito', sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- यहाँ गेम का HTML स्ट्रक्चर आएगा (AI से जेनरेटेड) -->
+    <div class="game-container">
+        <h2>Your Game UI Here</h2>
+        
+        <!-- उदाहरण के लिए कुछ बटन्स -->
+        <button onclick="checkAnswer(true)">Right Answer Example</button>
+        <button onclick="checkAnswer(false)">Wrong Answer Example</button>
+        
+        <br><br>
+        <button onclick="endMyGame()">Finish Game</button>
+    </div>
+
+    <script>
+        // 2. REQUIRED: Initialization Function
+        // ध्यान दें: फंक्शन का नाम `game_id` के आधार पर होना चाहिए।
+        // अगर game_id "math-your-unique-id" है, तो फंक्शन का नाम "math_your_unique_id_init" होगा (hyphen - को underscore _ से बदलें)
+        function math_your_unique_id_init() {
+            console.log("Game started by EduQuest Platform!");
+            // AI को कहें कि गेम शुरू करने का लॉजिक (जैसे पहला सवाल दिखाना) यहाँ से कॉल करे
+            startMyGame();
+        }
+
+        // --- गेम का बाकी लॉजिक (AI यहाँ अपना कोड लिखेगा) ---
+        function startMyGame() {
+            // Setup variables, show first question etc.
+        }
+
+        function checkAnswer(isCorrect) {
+            if (isCorrect) {
+                // 3. REQUIRED: स्कोर ऐड करने के लिए
+                if (typeof EduQuest !== 'undefined') EduQuest.submitScore(10);
+                console.log("Score added!");
+            } else {
+                // 4. REQUIRED: लाइफ कम करने के लिए
+                if (typeof EduQuest !== 'undefined') EduQuest.loseLife();
+                console.log("Life lost!");
+            }
+            // इसके बाद अगला सवाल दिखाएं
+        }
+
+        function endMyGame() {
+            // 5. REQUIRED: गेम खत्म होने पर
+            if (typeof EduQuest !== 'undefined') EduQuest.endGame();
+            console.log("Game Ended!");
+        }
+    </script>
+</body>
+</html>
