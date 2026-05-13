@@ -406,10 +406,10 @@ def scan_and_register_games(app):
 def init_db():
     with app.app_context():
         db.create_all()
-
         scan_and_register_games(app)
 
+# Initialize database and register games on startup (required for Gunicorn/Render)
+init_db()
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)
