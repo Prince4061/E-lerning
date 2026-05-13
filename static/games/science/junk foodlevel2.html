@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script id="game-metadata" type="application/json">
+    {
+      "game_id": "science-junkfood-level2",
+      "title": "Subway Dash: Food Run",
+      "subject": "science",
+      "level": 2,
+      "concept": "Healthy vs Junk Food",
+      "description": "Run and collect healthy food to keep your energy up!",
+      "instructions": "Swipe or use arrow keys to move, jump, and slide. Collect healthy food for energy, avoid junk food and obstacles! Get a high score to pass.",
+      "pass_threshold": 500,
+      "min_age": 6
+    }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subway Surfer 3D - Fixed Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-font {
+            font-family: 'Bungee', cursive;
+        }
+
+        @keyframes pulse-gold {
+            0% {
+                transform: scale(1);
+                text-shadow: 0 0 10px #ffd700;
+            }
+
+            50% {
+                transform: scale(1.05);
+                text-shadow: 0 0 20px #ffd700;
+            }
+
+            100% {
+                transform: scale(1);
+                text-shadow: 0 0 10px #ffd700;
+            }
+        }
+
+        .animate-score {
+            animation: pulse-gold 1s infinite;
+        }
+
+        .energy-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #fff;
+            margin-top: 4px;
+        }
+
+        .energy-bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.2s, background-color 0.2s;
+        }
+
+        /* Stop selection on UI */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body class="no-select">
+
+    <!-- Container for Three.js -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" class="absolute inset-0 z-10 flex flex-col pointer-events-none">
+
+        <!-- Score Board -->
+        <div class="p-4 md:p-6 flex justify-between items-start w-full">
+            <div class="flex gap-4">
+                <div
+                    class="bg-black/60 backdrop-blur-md p-3 md:p-4 rounded-xl border-2 border-yellow-500 text-white shadow-lg">
+                    <p class="text-[10px] md:text-xs uppercase tracking-widest text-yellow-500 font-bold mb-1">Score</p>
+                    <p id="score-val" class="text-2xl md:text-3xl game-font">0</p>
+                </div>
+                <div
+                    class="bg-black/60 backdrop-blur-md p-3 md:p-4 rounded-xl border-2 border-green-400 text-white shadow-lg flex flex-col justify-center w-32 md:w-48">
+                    <p class="text-[10px] md:text-xs uppercase tracking-widest text-green-400 font-bold mb-1">Energy</p>
+                    <div class="energy-bar-container">
+                        <div id="energy-bar" class="energy-bar-fill bg-green-500" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="bg-black/60 backdrop-blur-md p-3 md:p-4 rounded-xl border-2 border-blue-500 text-white text-right shadow-lg">
+                <p class="text-[10px] md:text-xs uppercase tracking-widest text-blue-500 font-bold mb-1">High Score</p>
+                <p id="high-score-val" class="text-2xl md:text-3xl game-font">0</p>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen"
+            class="flex-1 flex flex-col items-center justify-center pointer-events-auto bg-black/60 backdrop-blur-sm transition-opacity duration-300">
+            <h1
+                class="text-5xl md:text-8xl text-white game-font mb-2 italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-400 to-orange-600 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] text-center px-4">
+                SUBWAY<br />DASH
+            </h1>
+            <p class="text-white/90 text-lg md:text-xl mb-8 font-bold tracking-wide">Ready to Run?</p>
+
+            <button id="start-btn"
+                class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black px-10 py-4 rounded-full text-2xl md:text-3xl game-font transition-transform active:scale-90 shadow-[0_0_30px_rgba(245,158,11,0.6)] border-4 border-yellow-200">
+                TAP TO PLAY
+            </button>
+
+            <div class="mt-10 bg-black/50 p-4 rounded-xl border border-white/20">
+                <p class="text-white/80 text-center text-sm font-bold mb-3 uppercase border-b border-white/20 pb-2">
+                    Controls</p>
+                <div class="grid grid-cols-2 gap-x-8 gap-y-3 text-white/90 text-sm">
+                    <div class="flex items-center gap-2"><kbd class="bg-white/20 px-2 rounded">←</kbd> <kbd
+                            class="bg-white/20 px-2 rounded">→</kbd> Move</div>
+                    <div class="flex items-center gap-2"><kbd class="bg-white/20 px-2 rounded">↑</kbd> Jump</div>
+                    <div class="flex items-center gap-2"><kbd class="bg-white/20 px-2 rounded">↓</kbd> Slide</div>
+                    <div class="flex items-center gap-2 text-yellow-400">👆 Swipe Mobile</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen"
+            class="hidden flex-1 flex flex-col items-center justify-center pointer-events-auto bg-red-950/80 backdrop-blur-md transition-opacity duration-300">
+            <h2
+                class="text-6xl md:text-8xl text-white game-font mb-4 text-shadow-lg drop-shadow-[0_0_20px_rgba(255,0,0,0.8)] text-center">
+                CRASHED!</h2>
+
+            <div class="bg-black/50 p-6 rounded-2xl border-2 border-yellow-500 mb-8 text-center flex gap-8">
+                <div>
+                    <p class="text-gray-400 text-sm uppercase tracking-wider mb-1">Final Score</p>
+                    <p id="final-score" class="text-4xl md:text-5xl text-yellow-400 game-font">0</p>
+                </div>
+            </div>
+
+            <button id="retry-btn"
+                class="bg-white text-black px-12 py-4 rounded-full text-2xl game-font hover:bg-gray-200 transition-transform active:scale-90 shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let scene, camera, renderer, clock;
+        let playerGroup, playerBody;
+        let ground, cityScenery = [];
+        let obstacles = [];
+        let activeFoods = [];
+
+        // Game Settings
+        const LANE_WIDTH = 3.5;
+        const lanes = [-LANE_WIDTH, 0, LANE_WIDTH]; // Left, Center, Right
+        let currentLane = 1; // Starts in Center (index 1)
+
+        let gameActive = false;
+        let isJumping = false;
+        let isSliding = false;
+
+        let score = 0;
+        let energy = 100;
+        let highScore = localStorage.getItem('subwayDashHighScore') || 0;
+        let baseSpeed = 0.65; // Increased initial speed from the start
+        let currentSpeed = 0;
+        let speedMultiplier = 1;
+
+        // Sound Manager (Tone.js)
+        const SoundManager = {
+            initialized: false,
+            init: async function () {
+                if (this.initialized) return;
+                await Tone.start();
+                this.initialized = true;
+
+                this.healthySynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                }).toDestination();
+                this.healthySynth.volume.value = -5;
+
+                this.junkSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.2, octaves: 4, oscillator: { type: "square" },
+                    envelope: { attack: 0.05, decay: 0.4, sustain: 0.01, release: 1.4 }
+                }).toDestination();
+                this.junkSynth.volume.value = -2;
+
+                this.jumpSynth = new Tone.Synth({
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 }
+                }).toDestination();
+                this.jumpSynth.volume.value = -2;
+
+                this.slideNoise = new Tone.NoiseSynth({
+                    noise: { type: 'pink' },
+                    envelope: { attack: 0.1, decay: 0.2, sustain: 0, release: 0.1 }
+                }).toDestination();
+                this.slideNoise.volume.value = -8;
+
+                this.crashSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05,
+                    octaves: 10,
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: "exponential" }
+                }).toDestination();
+                this.crashSynth.volume.value = 8;
+            },
+            playCoin: function () {
+                if (!this.initialized) return;
+                this.coinSynth.triggerAttackRelease(["B5", "E6"], "16n");
+            },
+            playJump: function () {
+                if (!this.initialized) return;
+                this.jumpSynth.frequency.setValueAtTime("C3", Tone.now());
+                this.jumpSynth.frequency.rampTo("C4", 0.1);
+                this.jumpSynth.triggerAttackRelease("8n");
+            },
+            playSlide: function () {
+                if (!this.initialized) return;
+                this.slideNoise.triggerAttackRelease("8n");
+            },
+            playCrash: function () {
+                if (!this.initialized) return;
+                this.crashSynth.triggerAttackRelease("C1", "8n");
+            },
+            playHealthy: function () {
+                if (!this.initialized) return;
+                this.healthySynth.triggerAttackRelease(["C5", "E5", "G5"], "16n");
+            },
+            playJunk: function () {
+                if (!this.initialized) return;
+                this.junkSynth.triggerAttackRelease("G2", "8n");
+            }
+        };
+
+        // HTML Elements
+        const scoreEl = document.getElementById('score-val');
+        const energyBarEl = document.getElementById('energy-bar'); // New element
+        const highScoreEl = document.getElementById('high-score-val');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreEl = document.getElementById('final-score');
+        const startBtn = document.getElementById('start-btn');
+        const retryBtn = document.getElementById('retry-btn');
+
+        function init() {
+            // 1. Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a0f2e); // Dark purple/night sky
+            scene.fog = new THREE.Fog(0x1a0f2e, 30, 120);
+
+            // 2. Camera Setup
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+            // Adjusted camera to look slightly down and follow player closely
+            camera.position.set(0, 7, 12);
+            camera.lookAt(0, 2, -10);
+
+            // 3. Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            // Setup Lights, World, and Player
+            createLighting();
+            createWorld();
+            createPlayer();
+
+            // Setup Event Listeners
+            setupInput();
+            window.addEventListener('resize', onWindowResize, false);
+
+            startBtn.addEventListener('click', async () => {
+                await SoundManager.init();
+                startGame();
+            });
+            retryBtn.addEventListener('click', async () => {
+                await SoundManager.init();
+                resetGame();
+            });
+
+            // Update initial High Score UI
+            highScoreEl.innerText = highScore;
+
+            // Start the render loop immediately to show background
+            requestAnimationFrame(animate);
+        }
+
+        function createLighting() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffddaa, 0.8);
+            directionalLight.position.set(-10, 20, 10);
+            directionalLight.castShadow = true;
+
+            // Optimize shadows
+            directionalLight.shadow.camera.left = -15;
+            directionalLight.shadow.camera.right = 15;
+            directionalLight.shadow.camera.top = 15;
+            directionalLight.shadow.camera.bottom = -15;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+
+            scene.add(directionalLight);
+
+            // Add a neon accent light
+            const pointLight = new THREE.PointLight(0x00ffff, 1, 50);
+            pointLight.position.set(0, 5, -10);
+            scene.add(pointLight);
+        }
+
+        function createWorld() {
+            // Ground Plane
+            const groundGeo = new THREE.PlaneGeometry(60, 500);
+            const groundMat = new THREE.MeshLambertMaterial({
+                color: 0x222222,
+                roughness: 0.8
+            });
+            ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.z = -100; // Extend backwards
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Rails
+            const railGeo = new THREE.BoxGeometry(0.2, 0.1, 500);
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.6 });
+
+            for (let i = 0; i < 3; i++) {
+                const laneX = lanes[i];
+
+                // Track padding (gravel look)
+                const trackBedGeo = new THREE.BoxGeometry(2.8, 0.05, 500);
+                const trackBedMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+                const trackBed = new THREE.Mesh(trackBedGeo, trackBedMat);
+                trackBed.position.set(laneX, 0.02, -100);
+                scene.add(trackBed);
+
+                // Left Rail
+                const leftRail = new THREE.Mesh(railGeo, railMat);
+                leftRail.position.set(laneX - 0.8, 0.05, -100);
+                scene.add(leftRail);
+
+                // Right Rail
+                const rightRail = new THREE.Mesh(railGeo, railMat);
+                rightRail.position.set(laneX + 0.8, 0.05, -100);
+                scene.add(rightRail);
+
+                // Add some ties (wooden planks) horizontally periodically
+                // For performance, we'll skip actual geometries for ties and use a texture in a real game,
+                // but we keep it simple here.
+            }
+
+            // Create side scenery (fake buildings)
+            createBuildings();
+        }
+
+        function createBuildings() {
+            const buildingMat = new THREE.MeshPhongMaterial({ color: 0x111122 });
+            const neonColors = [0xff0055, 0x00ffcc, 0xffff00, 0xaa00ff];
+
+            for (let i = 0; i < 20; i++) {
+                const height = 10 + Math.random() * 20;
+                const geo = new THREE.BoxGeometry(5, height, 5);
+                const building = new THREE.Mesh(geo, buildingMat);
+
+                // Randomly place left or right
+                const isLeft = Math.random() > 0.5;
+                const xPos = isLeft ? -12 - Math.random() * 10 : 12 + Math.random() * 10;
+                const zPos = -Math.random() * 200;
+
+                building.position.set(xPos, height / 2, zPos);
+
+                // Add simple neon stripe
+                if (Math.random() > 0.3) {
+                    const stripeGeo = new THREE.BoxGeometry(5.1, 0.5, 5.1);
+                    const stripeMat = new THREE.MeshBasicMaterial({
+                        color: neonColors[Math.floor(Math.random() * neonColors.length)]
+                    });
+                    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                    stripe.position.y = (height / 2) - 2;
+                    building.add(stripe);
+                }
+
+                scene.add(building);
+                cityScenery.push(building);
+            }
+        }
+
+        function createPlayer() {
+            playerGroup = new THREE.Group();
+
+            // Player Body (Capsule-like using Cylinder)
+            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 16);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0xff3300, shininess: 100 });
+            playerBody = new THREE.Mesh(bodyGeo, bodyMat);
+            playerBody.position.y = 0.9; // Half height
+            playerBody.castShadow = true;
+            playerGroup.add(playerBody);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const headMat = new THREE.MeshPhongMaterial({ color: 0xffdcb3 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.2;
+            playerGroup.add(head);
+
+            // Accessories (Cap)
+            const capGeo = new THREE.BoxGeometry(0.6, 0.2, 0.8);
+            const capMat = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+            const cap = new THREE.Mesh(capGeo, capMat);
+            cap.position.set(0, 2.5, 0.2);
+            playerGroup.add(cap);
+
+            // Initial Position
+            playerGroup.position.set(lanes[currentLane], 0, 0);
+            scene.add(playerGroup);
+        }
+
+        function setupInput() {
+            // Keyboard Controls
+            window.addEventListener('keydown', async (e) => {
+                if (!gameActive) {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                        await SoundManager.init();
+                        if (startScreen.classList.contains('hidden') === false) startGame();
+                        else if (gameOverScreen.classList.contains('hidden') === false) resetGame();
+                    }
+                    return;
+                }
+
+                switch (e.key) {
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        moveLane(-1);
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        moveLane(1);
+                        break;
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                    case ' ':
+                        jump();
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        slide();
+                        break;
+                }
+            });
+
+            // Touch Controls (Swipe)
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            // Attach to the whole document body to catch all swipes
+            document.body.addEventListener('touchstart', e => {
+                // Ignore clicks on buttons
+                if (e.target.tagName === 'BUTTON') return;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: false });
+
+            document.body.addEventListener('touchend', e => {
+                if (!gameActive) return;
+                if (e.target.tagName === 'BUTTON') return;
+
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+
+                const minSwipeDistance = 30;
+
+                // Determine if swipe is horizontal or vertical
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal swipe
+                    if (Math.abs(dx) > minSwipeDistance) {
+                        if (dx > 0) moveLane(1); // Swipe Right
+                        else moveLane(-1);       // Swipe Left
+                    }
+                } else {
+                    // Vertical swipe
+                    if (Math.abs(dy) > minSwipeDistance) {
+                        if (dy < 0) jump();      // Swipe Up
+                        else slide();            // Swipe Down
+                    }
+                }
+            }, { passive: false });
+
+            // Prevent default scrolling on canvas
+            document.body.addEventListener('touchmove', e => {
+                if (gameActive) e.preventDefault();
+            }, { passive: false });
+        }
+
+        function moveLane(direction) {
+            // direction: -1 (left), 1 (right)
+            const newLane = currentLane + direction;
+            if (newLane >= 0 && newLane <= 2) {
+                currentLane = newLane;
+                // Note: The actual movement is smoothed out in the update() function
+            }
+        }
+
+        function jump() {
+            if (isJumping || isSliding) return;
+            isJumping = true;
+            SoundManager.playJump();
+
+            // Simple jump physics using variables
+            let velocityY = 0.4;
+            const gravity = 0.02;
+
+            const jumpAnim = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(jumpAnim);
+                    return;
+                }
+
+                playerGroup.position.y += velocityY;
+                velocityY -= gravity;
+
+                // Floor collision
+                if (playerGroup.position.y <= 0) {
+                    playerGroup.position.y = 0;
+                    isJumping = false;
+                    clearInterval(jumpAnim);
+                }
+            }, 16); // ~60fps
+        }
+
+        function slide() {
+            if (isSliding || isJumping) return;
+            isSliding = true;
+            SoundManager.playSlide();
+
+            // Scale body down
+            playerBody.scale.y = 0.5;
+            playerBody.position.y = 0.45; // Adjust position so it stays on ground
+
+            // Revert after time
+            setTimeout(() => {
+                if (!gameActive) return;
+                playerBody.scale.y = 1;
+                playerBody.position.y = 0.9;
+                isSliding = false;
+            }, 800);
+        }
+
+        function createFoodMesh(type) {
+            const group = new THREE.Group();
+            if (type === 'healthy') {
+                // Apple - Made MUCH bigger
+                const geo = new THREE.SphereGeometry(0.8, 16, 16);
+                const mat = new THREE.MeshPhongMaterial({ color: 0xff1111, shininess: 80 });
+                const mesh = new THREE.Mesh(geo, mat);
+
+                // Stem
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.4), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+                stem.position.y = 0.8;
+
+                // Leaf for distinct visual
+                const leafGeo = new THREE.ConeGeometry(0.2, 0.6, 4);
+                const leafMat = new THREE.MeshBasicMaterial({ color: 0x00aa00 });
+                const leaf = new THREE.Mesh(leafGeo, leafMat);
+                leaf.position.set(0.3, 0.8, 0);
+                leaf.rotation.z = Math.PI / 4;
+
+                group.add(mesh, stem, leaf);
+            } else {
+                // Junk Food Varieties
+                const junkRand = Math.floor(Math.random() * 3);
+
+                if (junkRand === 0) {
+                    // 1. Burger
+                    const bunMat = new THREE.MeshPhongMaterial({ color: 0xeebb66 });
+                    const meatMat = new THREE.MeshPhongMaterial({ color: 0x552200 });
+                    const cheeseMat = new THREE.MeshPhongMaterial({ color: 0xffcc00 }); // Yellow cheese
+
+                    const bun1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.3, 16), bunMat);
+                    bun1.position.y = 0.4;
+
+                    const cheese = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 1.8), cheeseMat);
+                    cheese.position.y = 0.15;
+                    cheese.rotation.y = Math.PI / 4;
+
+                    const meat = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.3, 16), meatMat);
+
+                    const bun2 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.3, 16), bunMat);
+                    bun2.position.y = -0.3;
+
+                    group.add(bun1, cheese, meat, bun2);
+                } else if (junkRand === 1) {
+                    // 2. Donut (Pink Icing)
+                    const geo = new THREE.TorusGeometry(0.7, 0.4, 16, 32);
+                    const mat = new THREE.MeshPhongMaterial({ color: 0xff66b2, shininess: 90 });
+                    const donut = new THREE.Mesh(geo, mat);
+                    donut.position.y = 0.6;
+                    group.add(donut);
+                } else {
+                    // 3. Soda Can
+                    const canGeo = new THREE.CylinderGeometry(0.6, 0.6, 1.8, 16);
+                    const canMat = new THREE.MeshPhongMaterial({ color: 0xff1144, shininess: 100 }); // Red cola can
+                    const can = new THREE.Mesh(canGeo, canMat);
+                    can.position.y = 0.9;
+
+                    const strawGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.8);
+                    const strawMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                    const straw = new THREE.Mesh(strawGeo, strawMat);
+                    straw.position.set(0.2, 1.9, 0);
+                    straw.rotation.z = Math.PI / 8;
+
+                    group.add(can, straw);
+                }
+            }
+
+            // Overall scale up
+            group.scale.set(1.2, 1.2, 1.2);
+            return group;
+        }
+
+        function spawnFood(laneX) {
+            // 60% chance for healthy food to ensure energy doesn't run out fast
+            const isHealthy = Math.random() > 0.4;
+            const numItems = 1 + Math.floor(Math.random() * 2);
+
+            for (let i = 0; i < numItems; i++) {
+                const food = createFoodMesh(isHealthy ? 'healthy' : 'junk');
+                // Lifted slightly higher (1.5) so bigger objects don't clip into ground
+                food.position.set(laneX, 1.5, -120 - (i * 3));
+                food.userData = { type: isHealthy ? 'healthy' : 'junk' };
+                scene.add(food);
+                activeFoods.push(food);
+            }
+        }
+
+        function spawnItem() {
+            if (!gameActive) return;
+
+            // Determine how many items to spawn (increases with difficulty)
+            let numItemsToSpawn = 1;
+            // At higher speeds, chance to spawn items in 2 lanes simultaneously (leaves 1 lane safe)
+            if (speedMultiplier > 1.3 && Math.random() < (speedMultiplier - 1.3) * 0.6) {
+                numItemsToSpawn = 2;
+            }
+
+            // Get random unique lanes
+            const availableLanes = [0, 1, 2].sort(() => 0.5 - Math.random());
+
+            for (let i = 0; i < numItemsToSpawn; i++) {
+                const laneX = lanes[availableLanes[i]];
+
+                // 40% chance to spawn food (increased for better energy regen), 60% to spawn obstacles
+                if (Math.random() < 0.4) {
+                    spawnFood(laneX);
+                } else {
+                    // Type of obstacle
+                    const rand = Math.random();
+                    let obsMesh;
+                    let obsType = "";
+
+                    if (rand < 0.4) {
+                        // 1. TRAIN (Tall and wide, block whole lane)
+                        const geo = new THREE.BoxGeometry(2.5, 3.5, 10);
+                        const mat = new THREE.MeshPhongMaterial({ color: 0x00aaff, shininess: 80 });
+                        obsMesh = new THREE.Mesh(geo, mat);
+                        obsMesh.position.set(laneX, 1.75, -120);
+                        obsType = "train";
+
+                        const windowGeo = new THREE.BoxGeometry(2.6, 1, 8);
+                        const windowMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+                        const windows = new THREE.Mesh(windowGeo, windowMat);
+                        windows.position.y = 0.5;
+                        obsMesh.add(windows);
+
+                    } else if (rand < 0.7) {
+                        // 2. HIGH BARRIER (Must slide under)
+                        const geo = new THREE.BoxGeometry(3, 0.5, 0.5);
+                        const mat = new THREE.MeshPhongMaterial({ color: 0xff0044 });
+                        obsMesh = new THREE.Mesh(geo, mat);
+                        obsMesh.position.set(laneX, 2.0, -120);
+                        obsType = "high_barrier";
+
+                        const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 2);
+                        const poleMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                        const p1 = new THREE.Mesh(poleGeo, poleMat);
+                        p1.position.set(-1.4, -1, 0);
+                        const p2 = new THREE.Mesh(poleGeo, poleMat);
+                        p2.position.set(1.4, -1, 0);
+                        obsMesh.add(p1);
+                        obsMesh.add(p2);
+
+                    } else {
+                        // 3. LOW HURDLE (Must jump over)
+                        const geo = new THREE.BoxGeometry(3, 1.2, 0.5);
+                        const mat = new THREE.MeshPhongMaterial({ color: 0xffcc00 });
+                        obsMesh = new THREE.Mesh(geo, mat);
+                        obsMesh.position.set(laneX, 0.6, -120);
+                        obsType = "low_hurdle";
+
+                        const stripeGeo = new THREE.BoxGeometry(3.1, 0.2, 0.51);
+                        const stripeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                        obsMesh.add(stripe);
+                    }
+
+                    obsMesh.castShadow = true;
+                    obsMesh.receiveShadow = true;
+                    obsMesh.userData = { type: obsType };
+
+                    scene.add(obsMesh);
+                    obstacles.push(obsMesh);
+                }
+            }
+
+            // Schedule next spawn based on speed - Gets MUCH faster as difficulty increases
+            const spawnRate = Math.max(350, 1800 / speedMultiplier);
+            setTimeout(spawnItem, spawnRate);
+        }
+
+        function animate() {
+            // Keep looping
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            if (gameActive) {
+                updateGame(delta);
+            } else {
+                // Idle animation (slow rotation of camera or player)
+                if (playerGroup) {
+                    // slight hover effect when idle
+                    playerGroup.position.y = (Math.sin(Date.now() * 0.005) * 0.1);
+                    if (isJumping) playerGroup.position.y = 0; // reset if died in air
+                }
+            }
+
+            // Render Scene
+            renderer.render(scene, camera);
+        }
+
+        function updateGame(delta) {
+            // 1. Smooth Lane Transition (Lerp)
+            const targetX = lanes[currentLane];
+            // Move 15% towards target per frame
+            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.15;
+
+            // 2. Increase Speed and Score - DIFFICULTY RAMP UP
+            speedMultiplier += 0.0004; // Increased rate so game gets harder faster
+            currentSpeed = baseSpeed * speedMultiplier;
+
+            // Add to score based on distance/speed
+            score += Math.floor(currentSpeed * 10) * 0.1;
+            scoreEl.innerText = Math.floor(score);
+
+            // Energy naturally drains faster as the game speeds up!
+            energy -= delta * (1.5 + (speedMultiplier * 1.5));
+            if (energy <= 0) {
+                energy = 0;
+                updateEnergyUI();
+                gameOver("STARVED!");
+                return;
+            }
+            updateEnergyUI();
+
+            // 3. Move Scenery (Illusion of player running forward)
+            // Move Buildings
+            cityScenery.forEach(bldg => {
+                bldg.position.z += currentSpeed * 2;
+                if (bldg.position.z > 20) {
+                    bldg.position.z = -180 - Math.random() * 50; // Recycle to back
+                }
+            });
+
+            // 4. Move and Check Obstacles
+            // Create a bounding box for player for collision
+            // We use specific logic rather than complex Three.js Box3 for tighter gameplay
+            const pX = playerGroup.position.x;
+            const pY = playerGroup.position.y;
+            const pZ = playerGroup.position.z;
+
+            for (let i = activeFoods.length - 1; i >= 0; i--) {
+                const food = activeFoods[i];
+                food.position.z += currentSpeed * 1.5;
+                food.rotation.y += 0.05; // Spinning effect
+
+                const cX = food.position.x;
+                const cY = food.position.y;
+                const cZ = food.position.z;
+
+                // Collision detection with player
+                if (cZ > -1.5 && cZ < 1.5) {
+                    // Increased hit box size (1.5) since food is much bigger now
+                    if (Math.abs(pX - cX) < 1.5 && pY < cY + 1.5) {
+                        // Collect Food
+                        if (food.userData.type === 'healthy') {
+                            energy = Math.min(100, energy + 15); // Heal
+                            speedMultiplier = Math.max(1.0, speedMultiplier - 0.1); // Slow down game (Calm/Easy)
+                            score += 50;
+                            
+                            if (window.parent && window.parent.EduQuest && typeof window.parent.EduQuest.submitScore === 'function') {
+                                window.parent.EduQuest.submitScore(50);
+                            } else if (window.parent !== window) {
+                                window.parent.postMessage({ type: 'gameScore', value: 50 }, '*');
+                            }
+                            
+                            SoundManager.playHealthy();
+                        } else {
+                            energy -= 10; // Damage
+                            speedMultiplier += 0.2; // Sugar Rush (Speed up game dangerously)
+
+                            // HUGE Penalty for eating junk food
+                            score -= 500;
+                            if (score < 0) score = 0; // Prevent score from going below zero
+
+                            if (window.parent && window.parent.EduQuest && typeof window.parent.EduQuest.loseLife === 'function') {
+                                window.parent.EduQuest.loseLife();
+                            } else if (window.parent !== window) {
+                                window.parent.postMessage({ type: 'gameLifeLost' }, '*');
+                            }
+
+                            SoundManager.playJunk();
+                        }
+
+                        scene.remove(food);
+                        activeFoods.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Remove missed foods
+                if (food.position.z > 10) {
+                    scene.remove(food);
+                    activeFoods.splice(i, 1);
+                }
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+
+                // Move obstacle towards player
+                obs.position.z += currentSpeed * 1.5; // Multiply for feeling of speed
+
+                // COLLISION DETECTION LOGIC
+                const oX = obs.position.x;
+                const oY = obs.position.y;
+                const oZ = obs.position.z;
+                const type = obs.userData.type;
+
+                // Check if obstacle is in the same Z-depth range as player
+                if (oZ > -1.5 && oZ < 1.5) {
+
+                    // Check if in same Lane (X-axis)
+                    // We check if distance is small enough since player lerps
+                    if (Math.abs(pX - oX) < 1.0) {
+
+                        let collision = false;
+
+                        // Y-axis check based on obstacle type
+                        if (type === "train") {
+                            // Train hits you no matter what if you are in same lane
+                            collision = true;
+                        }
+                        else if (type === "low_hurdle") {
+                            // Hurdle is ~1.2 high. If player Y < 1.0, hit.
+                            if (pY < 0.8) {
+                                collision = true;
+                            }
+                        }
+                        else if (type === "high_barrier") {
+                            // Barrier is at height 2.0. If player is NOT sliding, hit.
+                            // When sliding, player height is effectively halved.
+                            if (!isSliding) {
+                                collision = true;
+                            }
+                        }
+
+                        if (collision) {
+                            gameOver();
+                            return; // Stop updating this frame
+                        }
+                    }
+                }
+
+                // Remove passed obstacles
+                if (obs.position.z > 10) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Optional: Dynamic Camera effect
+            // Camera shakes slightly at high speeds
+            if (speedMultiplier > 1.5) {
+                camera.position.x = (Math.random() - 0.5) * 0.08;
+            } else {
+                camera.position.x = 0;
+            }
+        }
+
+        function updateEnergyUI() {
+            energyBarEl.style.width = `${energy}%`;
+            if (energy > 60) energyBarEl.style.backgroundColor = '#22c55e'; // Green
+            else if (energy > 30) energyBarEl.style.backgroundColor = '#eab308'; // Yellow
+            else energyBarEl.style.backgroundColor = '#ef4444'; // Red
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function startGame() {
+            // Hide UI
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            // Reset Stats
+            score = 0;
+            energy = 100;
+            speedMultiplier = 1;
+            currentLane = 1;
+            playerGroup.position.set(lanes[currentLane], 0, 0);
+
+            // Ensure proper posture
+            isJumping = false;
+            isSliding = false;
+            playerBody.scale.y = 1;
+            playerBody.position.y = 0.9;
+
+            scoreEl.innerText = "0";
+            updateEnergyUI();
+
+            // Start Logic
+            gameActive = true;
+            spawnItem(); // Start spawning loop
+        }
+
+        function gameOver(reasonText = "CRASHED!") {
+            gameActive = false;
+            SoundManager.playCrash();
+
+            if (window.parent && window.parent.EduQuest && typeof window.parent.EduQuest.endGame === 'function') {
+                window.parent.EduQuest.finalScore = Math.floor(score);
+                window.parent.EduQuest.endGame();
+            } else if (window.parent !== window) {
+                window.parent.postMessage({ type: 'gameOver', score: Math.floor(score) }, '*');
+            }
+
+            // Show Game Over UI
+            document.querySelector('#game-over-screen h2').innerText = reasonText;
+            finalScoreEl.innerText = Math.floor(score);
+            gameOverScreen.classList.remove('hidden');
+
+            // Handle High Score
+            if (Math.floor(score) > highScore) {
+                highScore = Math.floor(score);
+                localStorage.setItem('subwayDashHighScore', highScore);
+                highScoreEl.innerText = highScore;
+                // Add some visual flair for new high score
+                finalScoreEl.classList.add('animate-score');
+            } else {
+                finalScoreEl.classList.remove('animate-score');
+            }
+
+            // Visual hit feedback
+            playerGroup.rotation.x = -Math.PI / 2; // Make player fall over
+        }
+
+        function resetGame() {
+            // Cleanup existing obstacles
+            obstacles.forEach(obs => {
+                scene.remove(obs);
+                // good practice to dispose geometries/materials in real apps
+            });
+            obstacles = [];
+
+            activeFoods.forEach(food => {
+                scene.remove(food);
+            });
+            activeFoods = [];
+
+            // Reset player visual state
+            playerGroup.rotation.x = 0;
+
+            // Restart
+            startGame();
+        }
+
+        // Initialize immediately
+        init();
+
+    </script>
+</body>
+
+</html>
