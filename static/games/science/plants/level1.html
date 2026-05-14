@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Plant Hero Adventure</title>
+    <script id="game-metadata" type="application/json">
+    {
+      "game_id": "science-plants-level1", 
+      "title": "Plant Hero Adventure",
+      "subject": "science", 
+      "level": 1,
+      "concept": "Parts of a Plant",
+      "topic": "plants",
+      "description": "Learn plant parts level by level!",
+      "instructions": "Drag and drop the plant parts to their correct locations.",
+      "pass_threshold": 70,
+      "min_age": 5
+    }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        .btn-font {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .draggable {
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+        }
+
+        .draggable:hover {
+            transform: scale(1.05);
+        }
+
+        .draggable.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+
+        .clone {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.9;
+            transform: translate(-50%, -50%) scale(1.2);
+            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3));
+        }
+
+        .drop-zone {
+            border: 3px dashed rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            position: absolute;
+            display: none;
+            /* Hidden by default, toggled by JS */
+        }
+
+        .drop-zone.active-level {
+            display: flex;
+        }
+
+        .drop-zone.active-hover {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.3);
+            transform: scale(1.05);
+        }
+
+        .drop-zone.filled {
+            border-style: solid;
+            border-color: transparent !important;
+            background: transparent !important;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            80% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .pop-in {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            50% {
+                transform: translateX(10px);
+            }
+
+            75% {
+                transform: translateX(-10px);
+            }
+        }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col relative">
+
+    <div id="start-screen"
+        class="absolute inset-0 bg-black bg-opacity-80 z-50 flex flex-col items-center justify-center text-white p-4 text-center">
+        <h1 class="text-5xl md:text-7xl mb-4 text-green-400 drop-shadow-lg">Plant Hero 🌱</h1>
+        <p class="text-xl md:text-2xl mb-8 font-bold text-yellow-200">Learn Plant Parts Level by Level!</p>
+        <button id="start-btn"
+            class="btn-font bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl px-10 py-4 rounded-full shadow-[0_8px_0_#b45309] active:shadow-[0_0px_0_#b45309] active:translate-y-2 transition-all">
+            PLAY NOW ▶
+        </button>
+        <p class="mt-6 text-sm opacity-70">Turn on sound for learning! 🔊</p>
+    </div>
+
+    <header class="w-full p-4 flex justify-between items-center bg-white bg-opacity-30 backdrop-blur-md shadow-md z-10">
+        <div>
+            <h1 class="text-2xl md:text-3xl text-green-900 drop-shadow-md">Plant Hero 🌱</h1>
+            <p id="level-indicator"
+                class="text-sm md:text-lg font-bold text-blue-800 bg-white bg-opacity-50 inline-block px-3 py-1 rounded-full mt-1">
+                Level 1</p>
+        </div>
+        <div
+            class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-2xl font-bold text-lg md:text-xl shadow-inner border-2 border-yellow-500">
+            Score: <span id="score">0</span>/<span id="target-score">4</span>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+
+        <!-- Left: Plant Target Area -->
+        <div class="flex-1 flex items-center justify-center p-2 relative pointer-events-none">
+            <div
+                class="relative w-[320px] h-[480px] bg-gradient-to-b from-blue-300 to-green-100 rounded-[3rem] shadow-2xl overflow-hidden border-8 border-white pointer-events-auto">
+
+                <!-- Scenery -->
+                <div class="absolute top-4 left-4 w-14 h-14 bg-yellow-400 rounded-full shadow-[0_0_30px_#facc15]"></div>
+                <div class="absolute bottom-0 w-full h-28 bg-[#8B4513]"></div> <!-- Dirt Ground -->
+
+                <!-- All Drop Zones (Toggled by Level) -->
+
+                <!-- Flower Zone -->
+                <div class="drop-zone top-[30px] left-[110px] w-[100px] h-[100px] rounded-full z-40 items-center justify-center"
+                    data-part="flower">
+                    <div class="hidden part-placed pop-in text-7xl">🌸</div>
+                </div>
+
+                <!-- Fruit Zone -->
+                <div class="drop-zone top-[110px] left-[180px] w-[60px] h-[60px] rounded-full z-40 items-center justify-center"
+                    data-part="fruit">
+                    <div class="hidden part-placed pop-in text-5xl">🍎</div>
+                </div>
+
+                <!-- Leaf Zone -->
+                <div class="drop-zone top-[160px] left-[40px] w-[240px] h-[80px] rounded-[50%] z-30 items-center justify-between px-4"
+                    data-part="leaf">
+                    <div class="hidden part-placed pop-in text-6xl" style="transform: scaleX(-1);">🌿</div>
+                    <div class="hidden part-placed pop-in text-6xl">🌿</div>
+                </div>
+
+                <!-- Stem Zone -->
+                <div class="drop-zone top-[130px] left-[145px] w-[30px] h-[220px] rounded-lg z-20" data-part="stem">
+                    <div class="hidden part-placed pop-in w-full h-full bg-green-600 rounded-lg shadow-inner"></div>
+                </div>
+
+                <!-- Root Zone -->
+                <div class="drop-zone bottom-[30px] left-[90px] w-[140px] h-[80px] rounded-[50%] z-10 items-center justify-center"
+                    data-part="root">
+                    <div class="hidden part-placed pop-in text-7xl mt-4">🪢</div>
+                </div>
+
+                <!-- Seed Zone -->
+                <div class="drop-zone bottom-[60px] left-[135px] w-[50px] h-[50px] rounded-full z-10 items-center justify-center"
+                    data-part="seed">
+                    <div class="hidden part-placed pop-in text-4xl">🌰</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div
+            class="h-56 md:h-full md:w-80 bg-white bg-opacity-70 backdrop-blur-lg border-t-4 md:border-t-0 md:border-l-4 border-white flex flex-col p-4 shadow-xl z-20">
+            <h2 id="instruction-text" class="text-xl md:text-2xl text-center text-blue-900 mb-2 font-bold">Drag Parts
+                Here</h2>
+
+            <!-- Draggables will be injected here by JS -->
+            <div id="parts-container"
+                class="flex-1 flex flex-row md:flex-col flex-wrap justify-center items-center gap-3 md:gap-4 overflow-y-auto pb-4">
+            </div>
+        </div>
+    </main>
+
+    <div id="tooltip"
+        class="absolute bottom-[230px] md:bottom-12 left-1/2 transform -translate-x-1/2 bg-white px-6 py-4 rounded-3xl shadow-2xl border-4 border-yellow-400 max-w-md w-[90%] text-center transition-all duration-300 opacity-0 translate-y-10 z-50 pointer-events-none">
+        <h3 id="tooltip-title" class="text-2xl text-blue-600 mb-1">Awesome!</h3>
+        <p id="tooltip-text" class="text-gray-700 font-bold text-lg"></p>
+
+        <!-- Next Level Button (Hidden initially) -->
+        <button id="next-level-btn"
+            class="hidden mt-4 mx-auto btn-font bg-green-500 hover:bg-green-400 text-white text-xl px-6 py-2 rounded-full shadow-[0_5px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all pointer-events-auto">
+            Next Level 🚀
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        function science_plants_level1_init() {
+            console.log("Plant Hero Adventure initialized by EduQuest Platform!");
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTone(freq, type, duration, vol = 0.3) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const Sounds = {
+            success: () => {
+                playTone(523.25, 'sine', 0.1); // C5
+                setTimeout(() => playTone(659.25, 'sine', 0.2), 100); // E5
+            },
+            error: () => playTone(150, 'sawtooth', 0.3, 0.5),
+            win: () => {
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => playTone(freq, 'sine', 0.2), i * 150);
+                });
+            }
+        };
+
+        let femaleVoice = null;
+
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            // Try to find a female voice by checking names
+            femaleVoice = voices.find(v =>
+                v.name.toLowerCase().includes('female') ||
+                v.name.toLowerCase().includes('samantha') ||
+                v.name.toLowerCase().includes('zira') ||
+                v.name.toLowerCase().includes('victoria') ||
+                v.name.toLowerCase().includes('lata') // Hindi/Indian female name often used
+            );
+            // Fallback: If no exact match, try the first English voice, we'll raise the pitch later
+            if (!femaleVoice) femaleVoice = voices.find(v => v.lang.startsWith('en'));
+        }
+
+        // Browsers load voices asynchronously
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            }
+            utterance.rate = 0.9;
+            utterance.pitch = 1.4; // High pitch to sound more feminine/friendly
+            window.speechSynthesis.speak(utterance);
+        }
+
+        const plantData = {
+            seed: { emoji: '🌰', title: "SEED!", desc: "The seed is where life begins! Plant it in the dirt." },
+            root: { emoji: '🪢', title: "ROOTS!", desc: "Roots drink water and minerals from the soil." },
+            stem: { css: true, title: "STEM!", desc: "The stem is an elevator, carrying water up!" },
+            leaf: { emoji: '🌿', title: "LEAVES!", desc: "Leaves catch sunlight to cook food! Yummy!" },
+            flower: { emoji: '🌸', title: "FLOWER!", desc: "Flowers are beautiful and help make new seeds." },
+            fruit: { emoji: '🍎', title: "FRUIT!", desc: "The fruit protects the seeds inside and is tasty to eat!" }
+        };
+
+        const levels = [
+            {
+                id: 1,
+                parts: ['root', 'stem', 'leaf', 'flower'],
+                ordered: false,
+                instruction: "Build the basic plant!"
+            },
+            {
+                id: 2,
+                parts: ['root', 'stem', 'leaf', 'flower', 'fruit'],
+                ordered: false,
+                instruction: "Plants grow Fruits too! Build it!"
+            },
+            {
+                id: 3,
+                parts: ['seed', 'root', 'stem', 'leaf', 'flower'],
+                ordered: true,
+                instruction: "Grow in order! Start with the Seed."
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let score = 0;
+        let expectedOrderIndex = 0; // Only used for ordered levels
+
+        const partsContainer = document.getElementById('parts-container');
+        const levelIndicator = document.getElementById('level-indicator');
+        const instructionText = document.getElementById('instruction-text');
+        const targetScoreEl = document.getElementById('target-score');
+        const scoreEl = document.getElementById('score');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+
+        function loadLevel(index) {
+            currentLevelIndex = index;
+            const level = levels[index];
+            score = 0;
+            expectedOrderIndex = 0;
+            scoreEl.innerText = score;
+            targetScoreEl.innerText = level.parts.length;
+            levelIndicator.innerText = `Level ${level.id}`;
+            instructionText.innerText = level.instruction;
+
+            // Hide next level button
+            nextLevelBtn.classList.add('hidden');
+            document.getElementById('tooltip').style.opacity = '0';
+            document.getElementById('tooltip').style.pointerEvents = 'none';
+
+            speak(level.instruction);
+
+            // 1. Reset drop zones
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.classList.remove('filled', 'active-level');
+                zone.style.borderColor = '';
+
+                // Hide placed parts
+                const parts = zone.querySelectorAll('.part-placed');
+                parts.forEach(p => p.classList.add('hidden'));
+
+                // Only activate drop zones required for this level
+                if (level.parts.includes(zone.dataset.part)) {
+                    zone.classList.add('active-level');
+                }
+            });
+
+            // 2. Generate Draggable Items
+            partsContainer.innerHTML = ''; // clear old
+
+            // Shuffle parts for random display
+            const partsToDisplay = [...level.parts].sort(() => Math.random() - 0.5);
+
+            partsToDisplay.forEach(partKey => {
+                const partInfo = plantData[partKey];
+                const div = document.createElement('div');
+                div.className = 'draggable bg-white p-3 rounded-2xl shadow-lg border-b-4 border-gray-200 flex flex-col items-center justify-center w-20 h-20 md:w-24 md:h-24';
+                div.dataset.part = partKey;
+
+                if (partInfo.css) {
+                    div.innerHTML = `
+                        <div class="w-4 h-12 bg-green-600 rounded-sm pointer-events-none shadow-sm"></div>
+                        <span class="font-bold text-xs md:text-sm pointer-events-none mt-1 uppercase">${partKey}</span>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <span class="text-3xl md:text-4xl pointer-events-none">${partInfo.emoji}</span>
+                        <span class="font-bold text-xs md:text-sm pointer-events-none mt-1 uppercase">${partKey}</span>
+                    `;
+                }
+                partsContainer.appendChild(div);
+            });
+        }
+
+        // Start Button Logic
+        document.getElementById('start-btn').addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            loadVoices(); // Try to load immediately on user interaction
+            document.getElementById('start-screen').style.display = 'none';
+            loadLevel(0);
+        });
+
+        // Next Level Logic
+        nextLevelBtn.addEventListener('click', () => {
+            if (currentLevelIndex + 1 < levels.length) {
+                loadLevel(currentLevelIndex + 1);
+            } else {
+                // Game Finished!
+                instructionText.innerText = "You are a Master Botanist!";
+                nextLevelBtn.classList.add('hidden');
+                speak("Congratulations! You completed all levels. You are a Master Botanist!");
+                confetti({ particleCount: 300, spread: 100, origin: { y: 0.3 } });
+
+                // Connect to EduQuest Platform
+                setTimeout(() => {
+                    const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
+                    if (platform && typeof platform.endGame === 'function') {
+                        platform.endGame(100);
+                    } else if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'gameOver', score: 100 }, '*');
+                    }
+                }, 3000);
+            }
+        });
+
+        let cloneElement = null;
+        let originalSourceElement = null;
+        let currentPartType = null;
+        let tooltipTimer = null;
+
+        function showTooltip(partKey) {
+            clearTimeout(tooltipTimer);
+            const data = plantData[partKey];
+            const tooltip = document.getElementById('tooltip');
+            document.getElementById('tooltip-title').innerText = data.title;
+            document.getElementById('tooltip-text').innerText = data.desc;
+            tooltip.style.opacity = '1';
+            tooltip.style.transform = 'translate(-50%, 0)';
+            speak(data.desc);
+
+            tooltipTimer = setTimeout(() => {
+                // Don't hide if it's showing the win/next level screen
+                if (nextLevelBtn.classList.contains('hidden')) {
+                    tooltip.style.opacity = '0';
+                    tooltip.style.transform = 'translate(-50%, 40px)';
+                }
+            }, 6000);
+        }
+
+        document.body.addEventListener('pointerdown', (e) => {
+            const draggable = e.target.closest('.draggable');
+            if (!draggable || draggable.classList.contains('disabled')) return;
+
+            e.preventDefault();
+
+            originalSourceElement = draggable;
+            currentPartType = draggable.dataset.part;
+
+            // Create clone
+            cloneElement = draggable.cloneNode(true);
+            cloneElement.classList.remove('draggable');
+            cloneElement.classList.add('clone');
+            cloneElement.style.left = e.clientX + 'px';
+            cloneElement.style.top = e.clientY + 'px';
+            document.body.appendChild(cloneElement);
+
+            originalSourceElement.style.opacity = '0.3';
+
+            // Highlight zones
+            document.querySelectorAll('.drop-zone.active-level:not(.filled)').forEach(zone => {
+                if (zone.dataset.part === currentPartType) {
+                    zone.classList.add('active-hover');
+                }
+            });
+        });
+
+        document.body.addEventListener('pointermove', (e) => {
+            if (!cloneElement) return;
+            cloneElement.style.left = e.clientX + 'px';
+            cloneElement.style.top = e.clientY + 'px';
+        });
+
+        document.body.addEventListener('pointerup', (e) => {
+            if (!cloneElement) return;
+
+            // Remove hover styles
+            document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('active-hover'));
+
+            cloneElement.style.display = 'none';
+            const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+            cloneElement.style.display = 'block';
+
+            const dropTarget = elemBelow ? elemBelow.closest('.drop-zone') : null;
+            const level = levels[currentLevelIndex];
+
+            let isValidDrop = false;
+
+            // 1. Is it dropped on the right target type?
+            if (dropTarget && dropTarget.dataset.part === currentPartType && !dropTarget.classList.contains('filled')) {
+
+                // 2. Check Order Logic if Level requires it
+                if (level.ordered) {
+                    if (currentPartType === level.parts[expectedOrderIndex]) {
+                        isValidDrop = true;
+                        expectedOrderIndex++; // Advance sequence
+                    } else {
+                        // Correct target, but wrong order!
+                        speak(`Not yet! First, we need the ${level.parts[expectedOrderIndex]}.`);
+                    }
+                } else {
+                    isValidDrop = true;
+                }
+            }
+
+            if (isValidDrop) {
+                // SUCCESS DROP
+                Sounds.success();
+                dropTarget.classList.add('filled');
+
+                // Connect to EduQuest Platform (Update Score)
+                const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
+                if (platform && typeof platform.submitScore === 'function') {
+                    platform.submitScore(10);
+                } else if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'gameScore', value: 10 }, '*');
+                }
+
+                // Show visuals
+                const partsToReveal = dropTarget.querySelectorAll('.part-placed');
+                partsToReveal.forEach(p => p.classList.remove('hidden'));
+
+                // Disable sidebar item
+                originalSourceElement.classList.add('disabled');
+
+                score++;
+                scoreEl.innerText = score;
+                showTooltip(currentPartType);
+
+                // WIN CONDITION CHECK
+                if (score === level.parts.length) {
+                    setTimeout(() => {
+                        Sounds.win();
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+
+                        document.getElementById('tooltip-title').innerText = "LEVEL COMPLETE! 🌟";
+                        document.getElementById('tooltip-text').innerText = "Great job! Let's go to the next level.";
+                        const tooltip = document.getElementById('tooltip');
+                        tooltip.style.opacity = '1';
+                        tooltip.style.transform = 'translate(-50%, 0)';
+                        tooltip.style.pointerEvents = 'auto'; // allow clicking button
+
+                        // Show next button if more levels exist
+                        if (currentLevelIndex + 1 < levels.length) {
+                            nextLevelBtn.classList.remove('hidden');
+                            speak("Great job! Click Next Level to continue.");
+                        } else {
+                            speak("You completed all levels! You are a master botanist!");
+                            instructionText.innerText = "You Win!";
+                            
+                            // Connect to EduQuest Platform on final level complete
+                            setTimeout(() => {
+                                const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
+                                if (platform && typeof platform.endGame === 'function') {
+                                    platform.endGame(100);
+                                } else if (window.parent !== window) {
+                                    window.parent.postMessage({ type: 'gameOver', score: 100 }, '*');
+                                }
+                            }, 3000);
+                        }
+                    }, 1500);
+                }
+
+            } else {
+                // WRONG DROP
+                Sounds.error();
+                originalSourceElement.style.opacity = '1';
+                if (dropTarget) {
+                    dropTarget.classList.add('shake');
+                    setTimeout(() => dropTarget.classList.remove('shake'), 400);
+                }
+            }
+
+            // Cleanup
+            cloneElement.remove();
+            cloneElement = null;
+            originalSourceElement = null;
+            currentPartType = null;
+        });
+
+        // Cancel drag on screen leave
+        document.body.addEventListener('pointercancel', () => {
+            if (cloneElement) {
+                cloneElement.remove();
+                cloneElement = null;
+                if (originalSourceElement) originalSourceElement.style.opacity = '1';
+                document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('active-hover'));
+            }
+        });
+    </script>
+</body>
+
+</html>
