@@ -22,11 +22,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap"
         rel="stylesheet">
+
     <style>
         body {
             font-family: 'Nunito', sans-serif;
             background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
             touch-action: none;
+            /* Prevents pull-to-refresh and zooming on mobile */
             overflow: hidden;
         }
 
@@ -41,6 +43,10 @@
             touch-action: none;
             cursor: grab;
             transition: transform 0.2s, opacity 0.2s;
+            /* Prevents long-press menu on mobile */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .draggable:active {
@@ -61,18 +67,24 @@
             position: fixed;
             pointer-events: none;
             z-index: 1000;
-            opacity: 0.9;
-            transform: translate(-50%, -50%) scale(1.2);
-            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3));
+            opacity: 0.95;
+            /* Offset Y heavily so the user's thumb doesn't hide the item on mobile */
+            transform: translate(-50%, -120%) scale(1.3);
+            filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.4));
         }
 
         .drop-zone {
-            border: 3px dashed rgba(255, 255, 255, 0.6);
+            border: 2px dashed rgba(255, 255, 255, 0.6);
             background: rgba(255, 255, 255, 0.2);
             transition: all 0.3s;
             position: absolute;
             display: none;
-            /* Hidden by default, toggled by JS */
+        }
+
+        @media (min-width: 768px) {
+            .drop-zone {
+                border-width: 3px;
+            }
         }
 
         .drop-zone.active-level {
@@ -119,16 +131,13 @@
                 transform: translateX(0);
             }
 
-            25% {
-                transform: translateX(-10px);
+            25%,
+            75% {
+                transform: translateX(-8px);
             }
 
             50% {
-                transform: translateX(10px);
-            }
-
-            75% {
-                transform: translateX(-10px);
+                transform: translateX(8px);
             }
         }
 
@@ -138,104 +147,114 @@
     </style>
 </head>
 
-<body class="h-screen w-screen flex flex-col relative">
+<body class="h-screen w-screen flex flex-col relative text-gray-800">
 
     <div id="start-screen"
-        class="absolute inset-0 bg-black bg-opacity-80 z-50 flex flex-col items-center justify-center text-white p-4 text-center">
-        <h1 class="text-5xl md:text-7xl mb-4 text-green-400 drop-shadow-lg">Plant Hero 🌱</h1>
-        <p class="text-xl md:text-2xl mb-8 font-bold text-yellow-200">Learn Plant Parts Level by Level!</p>
+        class="absolute inset-0 bg-black bg-opacity-80 z-50 flex flex-col items-center justify-center text-white p-4 text-center backdrop-blur-sm">
+        <h1 class="text-5xl md:text-7xl mb-2 md:mb-4 text-green-400 drop-shadow-lg">Plant Hero 🌱</h1>
+        <p class="text-lg md:text-2xl mb-8 font-bold text-yellow-200">Learn Plant Parts Level by Level!</p>
         <button id="start-btn"
-            class="btn-font bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl px-10 py-4 rounded-full shadow-[0_8px_0_#b45309] active:shadow-[0_0px_0_#b45309] active:translate-y-2 transition-all">
+            class="btn-font bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-2xl md:text-3xl px-8 py-3 md:px-10 md:py-4 rounded-full shadow-[0_6px_0_#b45309] active:shadow-[0_0px_0_#b45309] active:translate-y-2 transition-all">
             PLAY NOW ▶
         </button>
-        <p class="mt-6 text-sm opacity-70">Turn on sound for learning! 🔊</p>
+        <p class="mt-6 text-sm md:text-base opacity-70">Turn on sound for learning! 🔊</p>
     </div>
 
-    <header class="w-full p-4 flex justify-between items-center bg-white bg-opacity-30 backdrop-blur-md shadow-md z-10">
-        <div>
-            <h1 class="text-2xl md:text-3xl text-green-900 drop-shadow-md">Plant Hero 🌱</h1>
+    <header
+        class="w-full p-2 md:p-4 flex justify-between items-center bg-white bg-opacity-40 backdrop-blur-md shadow-sm z-10 shrink-0">
+        <div class="flex items-center gap-2 md:gap-3">
+            <h1 class="text-xl md:text-3xl text-green-900 drop-shadow-sm leading-none">Plant Hero 🌱</h1>
             <p id="level-indicator"
-                class="text-sm md:text-lg font-bold text-blue-800 bg-white bg-opacity-50 inline-block px-3 py-1 rounded-full mt-1">
-                Level 1</p>
+                class="text-xs md:text-lg font-bold text-blue-800 bg-white bg-opacity-60 px-2 md:px-3 py-1 rounded-full shadow-inner">
+                Level 1
+            </p>
         </div>
         <div
-            class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-2xl font-bold text-lg md:text-xl shadow-inner border-2 border-yellow-500">
+            class="bg-yellow-400 text-yellow-900 px-3 py-1 md:px-4 md:py-2 rounded-2xl font-bold text-sm md:text-xl shadow-inner border border-yellow-500 whitespace-nowrap">
             Score: <span id="score">0</span>/<span id="target-score">4</span>
         </div>
     </header>
 
-    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden min-h-0">
 
-        <!-- Left: Plant Target Area -->
-        <div class="flex-1 flex items-center justify-center p-2 relative pointer-events-none">
+        <!-- Left/Top: Responsive Plant Target Area -->
+        <div
+            class="flex-1 flex items-center justify-center p-2 md:p-4 relative pointer-events-none min-h-[50vh] md:min-h-0">
+
+            <!-- The board maintains an aspect ratio to scale cleanly on any screen -->
             <div
-                class="relative w-[320px] h-[480px] bg-gradient-to-b from-blue-300 to-green-100 rounded-[3rem] shadow-2xl overflow-hidden border-8 border-white pointer-events-auto">
+                class="relative w-full max-w-[360px] aspect-[2/3] bg-gradient-to-b from-blue-300 to-green-100 rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden border-4 md:border-8 border-white pointer-events-auto">
 
                 <!-- Scenery -->
-                <div class="absolute top-4 left-4 w-14 h-14 bg-yellow-400 rounded-full shadow-[0_0_30px_#facc15]"></div>
-                <div class="absolute bottom-0 w-full h-28 bg-[#8B4513]"></div> <!-- Dirt Ground -->
+                <div
+                    class="absolute top-[4%] left-[6%] w-[15%] aspect-square bg-yellow-400 rounded-full shadow-[0_0_20px_#facc15]">
+                </div>
+                <div class="absolute bottom-0 w-full h-[23%] bg-[#8B4513]"></div> <!-- Dirt Ground -->
 
-                <!-- All Drop Zones (Toggled by Level) -->
+                <!-- All Drop Zones configured with percentages -->
 
                 <!-- Flower Zone -->
-                <div class="drop-zone top-[30px] left-[110px] w-[100px] h-[100px] rounded-full z-40 items-center justify-center"
+                <div class="drop-zone top-[6.2%] left-[34.3%] w-[31.2%] h-[20.8%] rounded-full z-40 items-center justify-center flex"
                     data-part="flower">
-                    <div class="hidden part-placed pop-in text-7xl">🌸</div>
+                    <div class="hidden part-placed pop-in text-5xl md:text-7xl">🌸</div>
                 </div>
 
                 <!-- Fruit Zone -->
-                <div class="drop-zone top-[110px] left-[180px] w-[60px] h-[60px] rounded-full z-40 items-center justify-center"
+                <div class="drop-zone top-[22.9%] left-[56.2%] w-[18.7%] h-[12.5%] rounded-full z-40 items-center justify-center flex"
                     data-part="fruit">
-                    <div class="hidden part-placed pop-in text-5xl">🍎</div>
+                    <div class="hidden part-placed pop-in text-3xl md:text-5xl">🍎</div>
                 </div>
 
                 <!-- Leaf Zone -->
-                <div class="drop-zone top-[160px] left-[40px] w-[240px] h-[80px] rounded-[50%] z-30 items-center justify-between px-4"
+                <div class="drop-zone top-[33.3%] left-[12.5%] w-[75%] h-[16.6%] rounded-[50%] z-30 items-center justify-between px-3 md:px-6 flex"
                     data-part="leaf">
-                    <div class="hidden part-placed pop-in text-6xl" style="transform: scaleX(-1);">🌿</div>
-                    <div class="hidden part-placed pop-in text-6xl">🌿</div>
+                    <div class="hidden part-placed pop-in text-4xl md:text-6xl" style="transform: scaleX(-1);">🌿</div>
+                    <div class="hidden part-placed pop-in text-4xl md:text-6xl">🌿</div>
                 </div>
 
                 <!-- Stem Zone -->
-                <div class="drop-zone top-[130px] left-[145px] w-[30px] h-[220px] rounded-lg z-20" data-part="stem">
-                    <div class="hidden part-placed pop-in w-full h-full bg-green-600 rounded-lg shadow-inner"></div>
+                <div class="drop-zone top-[27%] left-[45.3%] w-[9.3%] h-[45.8%] rounded-lg z-20 flex" data-part="stem">
+                    <div
+                        class="hidden part-placed pop-in w-full h-full bg-green-600 rounded-md md:rounded-lg shadow-inner border border-green-800">
+                    </div>
                 </div>
 
                 <!-- Root Zone -->
-                <div class="drop-zone bottom-[30px] left-[90px] w-[140px] h-[80px] rounded-[50%] z-10 items-center justify-center"
+                <div class="drop-zone bottom-[6.2%] left-[28.1%] w-[43.7%] h-[16.6%] rounded-[50%] z-10 items-center justify-center flex"
                     data-part="root">
-                    <div class="hidden part-placed pop-in text-7xl mt-4">🪢</div>
+                    <div class="hidden part-placed pop-in text-5xl md:text-7xl mt-2 md:mt-4">🪢</div>
                 </div>
 
                 <!-- Seed Zone -->
-                <div class="drop-zone bottom-[60px] left-[135px] w-[50px] h-[50px] rounded-full z-10 items-center justify-center"
+                <div class="drop-zone bottom-[12.5%] left-[42.1%] w-[15.6%] h-[10.4%] rounded-full z-10 items-center justify-center flex"
                     data-part="seed">
-                    <div class="hidden part-placed pop-in text-4xl">🌰</div>
+                    <div class="hidden part-placed pop-in text-2xl md:text-4xl">🌰</div>
                 </div>
 
             </div>
         </div>
 
+        <!-- Right/Bottom: Draggable Parts -->
         <div
-            class="h-56 md:h-full md:w-80 bg-white bg-opacity-70 backdrop-blur-lg border-t-4 md:border-t-0 md:border-l-4 border-white flex flex-col p-4 shadow-xl z-20">
-            <h2 id="instruction-text" class="text-xl md:text-2xl text-center text-blue-900 mb-2 font-bold">Drag Parts
-                Here</h2>
+            class="h-auto pb-4 pt-2 shrink-0 md:h-full md:w-80 bg-white bg-opacity-70 backdrop-blur-lg border-t-2 md:border-t-0 md:border-l-4 border-white flex flex-col shadow-xl z-20">
+            <h2 id="instruction-text" class="text-lg md:text-2xl text-center text-blue-900 mb-2 font-bold px-2">Drag
+                Parts Here</h2>
 
-            <!-- Draggables will be injected here by JS -->
+            <!-- Draggables container: Row wrap on mobile to fit nicely, col wrap on desktop -->
             <div id="parts-container"
-                class="flex-1 flex flex-row md:flex-col flex-wrap justify-center items-center gap-3 md:gap-4 overflow-y-auto pb-4">
+                class="flex flex-row md:flex-col flex-wrap justify-center items-center gap-2 md:gap-4 px-2 md:overflow-y-auto w-full">
             </div>
         </div>
     </main>
 
+    <!-- Tooltip repositioned to center to avoid being hidden by hands on mobile -->
     <div id="tooltip"
-        class="absolute bottom-[230px] md:bottom-12 left-1/2 transform -translate-x-1/2 bg-white px-6 py-4 rounded-3xl shadow-2xl border-4 border-yellow-400 max-w-md w-[90%] text-center transition-all duration-300 opacity-0 translate-y-10 z-50 pointer-events-none">
-        <h3 id="tooltip-title" class="text-2xl text-blue-600 mb-1">Awesome!</h3>
-        <p id="tooltip-text" class="text-gray-700 font-bold text-lg"></p>
+        class="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-5 py-4 md:px-6 md:py-5 rounded-3xl shadow-2xl border-4 border-yellow-400 max-w-[90%] w-[320px] text-center transition-all duration-300 opacity-0 z-[100] pointer-events-none scale-90">
+        <h3 id="tooltip-title" class="text-xl md:text-2xl text-blue-600 mb-1">Awesome!</h3>
+        <p id="tooltip-text" class="text-gray-700 font-bold text-base md:text-lg leading-tight"></p>
 
-        <!-- Next Level Button (Hidden initially) -->
         <button id="next-level-btn"
-            class="hidden mt-4 mx-auto btn-font bg-green-500 hover:bg-green-400 text-white text-xl px-6 py-2 rounded-full shadow-[0_5px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all pointer-events-auto">
+            class="hidden mt-4 mx-auto btn-font bg-green-500 hover:bg-green-400 text-white text-lg md:text-xl px-6 py-2 rounded-full shadow-[0_4px_0_#166534] active:shadow-[0_0px_0_#166534] active:translate-y-1 transition-all pointer-events-auto">
             Next Level 🚀
         </button>
     </div>
@@ -267,8 +286,8 @@
 
         const Sounds = {
             success: () => {
-                playTone(523.25, 'sine', 0.1); // C5
-                setTimeout(() => playTone(659.25, 'sine', 0.2), 100); // E5
+                playTone(523.25, 'sine', 0.1);
+                setTimeout(() => playTone(659.25, 'sine', 0.2), 100);
             },
             error: () => playTone(150, 'sawtooth', 0.3, 0.5),
             win: () => {
@@ -279,32 +298,26 @@
         };
 
         let femaleVoice = null;
-
         function loadVoices() {
             const voices = window.speechSynthesis.getVoices();
-            // Try to find a female voice by checking names
             femaleVoice = voices.find(v =>
                 v.name.toLowerCase().includes('female') ||
                 v.name.toLowerCase().includes('samantha') ||
                 v.name.toLowerCase().includes('zira') ||
                 v.name.toLowerCase().includes('victoria') ||
-                v.name.toLowerCase().includes('lata') // Hindi/Indian female name often used
+                v.name.toLowerCase().includes('lata')
             );
-            // Fallback: If no exact match, try the first English voice, we'll raise the pitch later
             if (!femaleVoice) femaleVoice = voices.find(v => v.lang.startsWith('en'));
         }
 
-        // Browsers load voices asynchronously
         window.speechSynthesis.onvoiceschanged = loadVoices;
 
         function speak(text) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            if (femaleVoice) {
-                utterance.voice = femaleVoice;
-            }
+            if (femaleVoice) utterance.voice = femaleVoice;
             utterance.rate = 0.9;
-            utterance.pitch = 1.4; // High pitch to sound more feminine/friendly
+            utterance.pitch = 1.4;
             window.speechSynthesis.speak(utterance);
         }
 
@@ -318,29 +331,14 @@
         };
 
         const levels = [
-            {
-                id: 1,
-                parts: ['root', 'stem', 'leaf', 'flower'],
-                ordered: false,
-                instruction: "Build the basic plant!"
-            },
-            {
-                id: 2,
-                parts: ['root', 'stem', 'leaf', 'flower', 'fruit'],
-                ordered: false,
-                instruction: "Plants grow Fruits too! Build it!"
-            },
-            {
-                id: 3,
-                parts: ['seed', 'root', 'stem', 'leaf', 'flower'],
-                ordered: true,
-                instruction: "Grow in order! Start with the Seed."
-            }
+            { id: 1, parts: ['root', 'stem', 'leaf', 'flower'], ordered: false, instruction: "Build the basic plant!" },
+            { id: 2, parts: ['root', 'stem', 'leaf', 'flower', 'fruit'], ordered: false, instruction: "Plants grow Fruits too! Build it!" },
+            { id: 3, parts: ['seed', 'root', 'stem', 'leaf', 'flower'], ordered: true, instruction: "Grow in order! Start with the Seed." }
         ];
 
         let currentLevelIndex = 0;
         let score = 0;
-        let expectedOrderIndex = 0; // Only used for ordered levels
+        let expectedOrderIndex = 0;
 
         const partsContainer = document.getElementById('parts-container');
         const levelIndicator = document.getElementById('level-indicator');
@@ -359,75 +357,67 @@
             levelIndicator.innerText = `Level ${level.id}`;
             instructionText.innerText = level.instruction;
 
-            // Hide next level button
             nextLevelBtn.classList.add('hidden');
-            document.getElementById('tooltip').style.opacity = '0';
-            document.getElementById('tooltip').style.pointerEvents = 'none';
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.opacity = '0';
+            tooltip.style.transform = 'translate(-50%, -50%) scale(0.9)';
+            tooltip.style.pointerEvents = 'none';
 
             speak(level.instruction);
 
-            // 1. Reset drop zones
+            // Reset drop zones
             document.querySelectorAll('.drop-zone').forEach(zone => {
                 zone.classList.remove('filled', 'active-level');
                 zone.style.borderColor = '';
+                zone.querySelectorAll('.part-placed').forEach(p => p.classList.add('hidden'));
 
-                // Hide placed parts
-                const parts = zone.querySelectorAll('.part-placed');
-                parts.forEach(p => p.classList.add('hidden'));
-
-                // Only activate drop zones required for this level
                 if (level.parts.includes(zone.dataset.part)) {
                     zone.classList.add('active-level');
                 }
             });
 
-            // 2. Generate Draggable Items
-            partsContainer.innerHTML = ''; // clear old
-
-            // Shuffle parts for random display
+            // Generate Draggable Items
+            partsContainer.innerHTML = '';
             const partsToDisplay = [...level.parts].sort(() => Math.random() - 0.5);
 
             partsToDisplay.forEach(partKey => {
                 const partInfo = plantData[partKey];
                 const div = document.createElement('div');
-                div.className = 'draggable bg-white p-3 rounded-2xl shadow-lg border-b-4 border-gray-200 flex flex-col items-center justify-center w-20 h-20 md:w-24 md:h-24';
+                // Sized smaller for mobile to fit neatly in rows, larger on desktop
+                div.className = 'draggable bg-white p-2 rounded-xl shadow-md border-b-4 border-gray-200 flex flex-col items-center justify-center w-[68px] h-[68px] md:w-24 md:h-24';
                 div.dataset.part = partKey;
 
                 if (partInfo.css) {
                     div.innerHTML = `
-                        <div class="w-4 h-12 bg-green-600 rounded-sm pointer-events-none shadow-sm"></div>
-                        <span class="font-bold text-xs md:text-sm pointer-events-none mt-1 uppercase">${partKey}</span>
+                        <div class="w-3 h-8 md:w-4 md:h-12 bg-green-600 rounded-sm pointer-events-none shadow-sm"></div>
+                        <span class="font-bold text-[9px] md:text-sm pointer-events-none mt-1 uppercase text-gray-600">${partKey}</span>
                     `;
                 } else {
                     div.innerHTML = `
-                        <span class="text-3xl md:text-4xl pointer-events-none">${partInfo.emoji}</span>
-                        <span class="font-bold text-xs md:text-sm pointer-events-none mt-1 uppercase">${partKey}</span>
+                        <span class="text-3xl md:text-4xl pointer-events-none leading-none">${partInfo.emoji}</span>
+                        <span class="font-bold text-[9px] md:text-sm pointer-events-none mt-1 uppercase text-gray-600">${partKey}</span>
                     `;
                 }
                 partsContainer.appendChild(div);
             });
         }
 
-        // Start Button Logic
         document.getElementById('start-btn').addEventListener('click', () => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            loadVoices(); // Try to load immediately on user interaction
+            loadVoices();
             document.getElementById('start-screen').style.display = 'none';
             loadLevel(0);
         });
 
-        // Next Level Logic
         nextLevelBtn.addEventListener('click', () => {
             if (currentLevelIndex + 1 < levels.length) {
                 loadLevel(currentLevelIndex + 1);
             } else {
-                // Game Finished!
-                instructionText.innerText = "You are a Master Botanist!";
+                instructionText.innerText = "Master Botanist!";
                 nextLevelBtn.classList.add('hidden');
                 speak("Congratulations! You completed all levels. You are a Master Botanist!");
                 confetti({ particleCount: 300, spread: 100, origin: { y: 0.3 } });
 
-                // Connect to EduQuest Platform
                 setTimeout(() => {
                     const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
                     if (platform && typeof platform.endGame === 'function') {
@@ -451,14 +441,13 @@
             document.getElementById('tooltip-title').innerText = data.title;
             document.getElementById('tooltip-text').innerText = data.desc;
             tooltip.style.opacity = '1';
-            tooltip.style.transform = 'translate(-50%, 0)';
+            tooltip.style.transform = 'translate(-50%, -50%) scale(1)';
             speak(data.desc);
 
             tooltipTimer = setTimeout(() => {
-                // Don't hide if it's showing the win/next level screen
                 if (nextLevelBtn.classList.contains('hidden')) {
                     tooltip.style.opacity = '0';
-                    tooltip.style.transform = 'translate(-50%, 40px)';
+                    tooltip.style.transform = 'translate(-50%, -50%) scale(0.9)';
                 }
             }, 6000);
         }
@@ -467,7 +456,7 @@
             const draggable = e.target.closest('.draggable');
             if (!draggable || draggable.classList.contains('disabled')) return;
 
-            e.preventDefault();
+            e.preventDefault(); // Prevents scroll while dragging
 
             originalSourceElement = draggable;
             currentPartType = draggable.dataset.part;
@@ -482,7 +471,7 @@
 
             originalSourceElement.style.opacity = '0.3';
 
-            // Highlight zones
+            // Highlight valid drop zones
             document.querySelectorAll('.drop-zone.active-level:not(.filled)').forEach(zone => {
                 if (zone.dataset.part === currentPartType) {
                     zone.classList.add('active-hover');
@@ -499,28 +488,23 @@
         document.body.addEventListener('pointerup', (e) => {
             if (!cloneElement) return;
 
-            // Remove hover styles
             document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('active-hover'));
 
+            // Briefly hide clone to find what's underneath the pointer coordinates
             cloneElement.style.display = 'none';
             const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
             cloneElement.style.display = 'block';
 
             const dropTarget = elemBelow ? elemBelow.closest('.drop-zone') : null;
             const level = levels[currentLevelIndex];
-
             let isValidDrop = false;
 
-            // 1. Is it dropped on the right target type?
             if (dropTarget && dropTarget.dataset.part === currentPartType && !dropTarget.classList.contains('filled')) {
-
-                // 2. Check Order Logic if Level requires it
                 if (level.ordered) {
                     if (currentPartType === level.parts[expectedOrderIndex]) {
                         isValidDrop = true;
-                        expectedOrderIndex++; // Advance sequence
+                        expectedOrderIndex++;
                     } else {
-                        // Correct target, but wrong order!
                         speak(`Not yet! First, we need the ${level.parts[expectedOrderIndex]}.`);
                     }
                 } else {
@@ -529,11 +513,10 @@
             }
 
             if (isValidDrop) {
-                // SUCCESS DROP
+                // SUCCESS
                 Sounds.success();
                 dropTarget.classList.add('filled');
 
-                // Connect to EduQuest Platform (Update Score)
                 const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
                 if (platform && typeof platform.submitScore === 'function') {
                     platform.submitScore(10);
@@ -541,18 +524,14 @@
                     window.parent.postMessage({ type: 'gameScore', value: 10 }, '*');
                 }
 
-                // Show visuals
-                const partsToReveal = dropTarget.querySelectorAll('.part-placed');
-                partsToReveal.forEach(p => p.classList.remove('hidden'));
-
-                // Disable sidebar item
+                dropTarget.querySelectorAll('.part-placed').forEach(p => p.classList.remove('hidden'));
                 originalSourceElement.classList.add('disabled');
 
                 score++;
                 scoreEl.innerText = score;
                 showTooltip(currentPartType);
 
-                // WIN CONDITION CHECK
+                // WIN CHECK
                 if (score === level.parts.length) {
                     setTimeout(() => {
                         Sounds.win();
@@ -562,18 +541,15 @@
                         document.getElementById('tooltip-text').innerText = "Great job! Let's go to the next level.";
                         const tooltip = document.getElementById('tooltip');
                         tooltip.style.opacity = '1';
-                        tooltip.style.transform = 'translate(-50%, 0)';
-                        tooltip.style.pointerEvents = 'auto'; // allow clicking button
+                        tooltip.style.transform = 'translate(-50%, -50%) scale(1)';
+                        tooltip.style.pointerEvents = 'auto';
 
-                        // Show next button if more levels exist
                         if (currentLevelIndex + 1 < levels.length) {
                             nextLevelBtn.classList.remove('hidden');
                             speak("Great job! Click Next Level to continue.");
                         } else {
                             speak("You completed all levels! You are a master botanist!");
                             instructionText.innerText = "You Win!";
-                            
-                            // Connect to EduQuest Platform on final level complete
                             setTimeout(() => {
                                 const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
                                 if (platform && typeof platform.endGame === 'function') {
@@ -585,7 +561,6 @@
                         }
                     }, 1500);
                 }
-
             } else {
                 // WRONG DROP
                 Sounds.error();
@@ -596,14 +571,14 @@
                 }
             }
 
-            // Cleanup
+            // Clean up Drag state
             cloneElement.remove();
             cloneElement = null;
             originalSourceElement = null;
             currentPartType = null;
         });
 
-        // Cancel drag on screen leave
+        // Cancel drag safely
         document.body.addEventListener('pointercancel', () => {
             if (cloneElement) {
                 cloneElement.remove();
