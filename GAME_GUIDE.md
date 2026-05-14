@@ -5,24 +5,32 @@
 
 ---
 
-## 🚀 नया गेम कैसे जोड़ें? (सिर्फ 2 स्टेप्स)
+## 🚀 नया गेम और नया Topic कैसे जोड़ें?
 
-### Step 1: अपनी गेम की HTML फाइल बनाएँ
-आपका पूरा गेम एक सिंगल HTML फाइल के अंदर होना चाहिए (जिसमें CSS और JavaScript भी शामिल हो)।
+हमने प्लेटफॉर्म को **Topic-Based (विषय आधारित)** और **Scalable** बना दिया है।
 
-### Step 2: फाइल के ऊपर Metadata (JSON) जोड़ें
+### Step 1: सही Topic फोल्डर बनाएँ या चुनें
+- `static/games/math/` या `static/games/science/` के अंदर एक फोल्डर होना चाहिए (जैसे `addition/` या `nutrition/`)।
+- अगर आप कोई नया Topic जोड़ रहे हैं, तो बस एक नया फोल्डर बना लीजिये!
+
+### Step 2: अपनी गेम की HTML फाइल बनाएँ
+आपका पूरा गेम एक सिंगल HTML फाइल के अंदर होना चाहिए। इस फाइल का नाम सीक्वेंशियल रखें (जैसे `level1.html`, `level2.html`) और इसे अपने टॉपिक फोल्डर में सेव करें।
+
+### Step 3: फाइल के ऊपर Metadata (JSON) जोड़ें
 अपनी HTML फाइल में `<head>` टैग के तुरंत बाद यह `<script>` ब्लॉक जोड़ें:
 
 ```html
 <script id="game-metadata" type="application/json">
 {
-  "game_id": "math-subtraction-2", 
-  "title": "Minus Monster",
+  "game_id": "math-addition-1", 
+  "title": "Space Addition",
   "subject": "math",
-  "level": 2,
-  "concept": "Subtraction",
-  "description": "Master subtraction with engaging gameplay!",
-  "instructions": "Find the correct answer to complete the subtraction.",
+  "level": 1,
+  "concept": "Addition",
+  "topic": "Addition",
+  "is_premium": false,
+  "description": "Master addition with engaging gameplay!",
+  "instructions": "Find the correct sum to win.",
   "pass_threshold": 70,
   "min_age": 6
 }
@@ -33,16 +41,13 @@
 - `game_id`: गेम का एक यूनिक नाम (स्पेस के बिना)।
 - `title`: गेम का नाम जो वेबसाइट पर दिखेगा।
 - `subject`: `math` या `science`।
-- `level`: गेम का कठिनाई स्तर (1, 2, 3...)।
-- `concept`: बच्चा इस गेम से क्या सीखेगा (जैसे Addition, Plants)।
-- `pass_threshold`: पास होने के लिए कितने % मार्क्स चाहिए (आमतौर पर 70)।
-
-### Step 3: फाइल को सही फोल्डर में रखें
-- अगर Math का गेम है तो: `static/games/math/` फोल्डर में सेव करें।
-- अगर Science का गेम है तो: `static/games/science/` फोल्डर में सेव करें।
+- `level`: गेम का कठिनाई स्तर (1, 2, 3...) - हर नए टॉपिक का पहला गेम `level: 1` होना चाहिए।
+- `topic`: यह बहुत ज़रूरी है! इसी नाम से UI पर नया कार्ड बनेगा (जैसे "Addition" या "Nutrition")।
+- `is_premium`: `true` या `false`। अगर इसे `true` रखा तो यह गेम सिर्फ़ प्रीमियम यूज़र्स खेल पाएंगे (UI पर 👑 दिखेगा)।
+- `concept`: बच्चा इस गेम से क्या सीखेगा।
 
 **बस! काम हो गया! 🎉**
-जैसे ही आप सर्वर (`python app.py`) को रीस्टार्ट करेंगे, आपका नया गेम अपने आप वेबसाइट पर दिखने लगेगा!
+जैसे ही आप सर्वर (`python app.py`) को रीस्टार्ट करेंगे, बैकएंड आपके नए टॉपिक और नए गेम को खुद स्कैन कर लेगा। UI पर ऑटोमैटिकली टॉपिक का नया कार्ड बन जाएगा!
 
 ---
 

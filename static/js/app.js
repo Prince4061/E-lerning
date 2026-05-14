@@ -7,6 +7,7 @@ const App = {
   // Current user state (synced with backend)
   user: null,
   currentSubject: null,
+  currentTopic: null,
   currentGameId: null,
   gameState: {
     score: 0,
@@ -149,6 +150,7 @@ const App = {
     localStorage.removeItem('eduquest_subject');
     this.user = null;
     this.currentSubject = null;
+    this.currentTopic = null;
     this.showScreen('welcome');
   },
 
@@ -291,6 +293,10 @@ const App = {
     }
 
     // Handle screen-specific logic
+    if (screenId === 'topics') {
+      this.refreshTopics();
+    }
+
     if (screenId === 'hub') {
       if (window.GameLoader) {
         GameLoader.unloadGame();
@@ -489,7 +495,64 @@ const App = {
     badge.textContent = subject === 'math' ? 'Math Magic' : 'Science Squad';
     badge.style.color = subject === 'math' ? 'var(--math-color)' : 'var(--science-color)';
 
-    this.showScreen('hub');
+    this.showScreen('topics');
+  },
+
+  /**
+   * Refresh the topics screen
+   */
+  refreshTopics() {
+    if (!this.user) return;
+    
+    // Set title
+    const title = document.getElementById('topics-title');
+    title.textContent = this.currentSubject === 'math' ? 'Math Topics' : 'Science Topics';
+    
+    const games = GameRegistry.getGamesBySubject(this.currentSubject);
+    
+    // Get unique topics and their premium status
+    const topicsMap = new Map();
+    games.forEach(g => {
+        if (!topicsMap.has(g.topic)) {
+            topicsMap.set(g.topic, {
+                topic: g.topic,
+                is_premium: g.is_premium
+            });
+        }
+    });
+    const topics = Array.from(topicsMap.values());
+    
+    const grid = document.getElementById('topics-grid');
+    grid.innerHTML = '';
+    
+    topics.forEach(t => {
+        const card = document.createElement('div');
+        const colorClass = this.currentSubject === 'math' ? 'math-card' : 'science-card';
+        card.className = `subject-card ${colorClass}`;
+        
+        const isLocked = t.is_premium && !this.user.is_premium;
+        
+        card.innerHTML = `
+          <div class="subject-icon">${isLocked ? '👑' : (this.currentSubject === 'math' ? '🔢' : '🔬')}</div>
+          <h3>${t.topic}</h3>
+          <p>${isLocked ? 'Premium Content' : 'Play now!'}</p>
+        `;
+        
+        card.onclick = () => this.selectTopic(t.topic, isLocked);
+        grid.appendChild(card);
+    });
+  },
+
+  /**
+   * Select a topic
+   */
+  selectTopic(topic, isLocked) {
+      if (isLocked) {
+          document.getElementById('premium-modal-overlay').classList.add('active');
+          return;
+      }
+      this.currentTopic = topic;
+      this.showScreen('hub');
   },
 
   /**
@@ -502,8 +565,11 @@ const App = {
     document.getElementById('display-name').textContent = this.user.name;
     document.getElementById('user-avatar').textContent = this.getAvatarEmoji(this.user.age);
 
-    // Load games for current subject
-    const games = GameRegistry.getGamesBySubject(this.currentSubject);
+    // Load games for current subject AND topic
+    const subjectGames = GameRegistry.getGamesBySubject(this.currentSubject);
+    const games = subjectGames.filter(g => g.topic === this.currentTopic);
+    games.sort((a, b) => a.level - b.level);
+    
     const levelsGrid = document.getElementById('levels-grid');
     levelsGrid.innerHTML = '';
 

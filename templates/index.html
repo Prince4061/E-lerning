@@ -249,6 +249,19 @@
     </div>
   </div>
 
+  <!-- Topics Selection Screen -->
+  <div id="screen-topics" class="screen">
+    <div class="subjects-container">
+      <div class="back-btn" onclick="App.showScreen('subjects')">← Back to Subjects</div>
+      <h2 class="screen-title" id="topics-title">Choose a Topic!</h2>
+      <p class="screen-subtitle">Explore different topics in this subject.</p>
+      
+      <div class="subject-cards" id="topics-grid">
+        <!-- Topics loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
   <!-- Level Hub Screen -->
   <div id="screen-hub" class="screen">
     <div class="hub-container">
@@ -281,8 +294,8 @@
       </div>
 
       <div class="hub-footer">
-        <button class="btn btn-secondary" onclick="App.showScreen('subjects')">
-          ← Change Subject
+        <button class="btn btn-secondary" onclick="App.showScreen('topics')">
+          ← Back to Topics
         </button>
       </div>
     </div>
@@ -382,6 +395,21 @@
         <div class="modal-actions">
           <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
           <button class="btn btn-danger" id="modal-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium Modal -->
+  <div class="modal-overlay" id="premium-modal-overlay">
+    <div class="modal">
+      <div class="modal-content text-center p-6">
+        <div class="text-6xl mb-4">👑</div>
+        <h2 class="text-2xl font-bold text-yellow-600 mb-2">Premium Content</h2>
+        <p class="text-gray-600 mb-6" id="premium-modal-message">This topic is for Premium users only!</p>
+        <div class="modal-actions flex justify-center gap-4">
+          <button class="btn btn-secondary" onclick="document.getElementById('premium-modal-overlay').classList.remove('active')">Close</button>
+          <button class="btn btn-primary" onclick="alert('Upgrade feature coming soon!')">Upgrade Now 🌟</button>
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ class User(db.Model):
     age = db.Column(db.Integer, nullable=False)
     mobile = db.Column(db.String(20), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    is_premium = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=db.func.now())
 
     def set_password(self, password):
@@ -34,6 +35,7 @@ class User(db.Model):
             'name': self.name,
             'age': self.age,
             'mobile': self.mobile,
+            'is_premium': self.is_premium,
             'created_at': self.created_at.isoformat()
         }
 
@@ -68,6 +70,7 @@ class GameMetadata(db.Model):
     subject = db.Column(db.String(50), nullable=False)
     level = db.Column(db.Integer, nullable=False)
     concept = db.Column(db.String(200), nullable=False)
+    topic = db.Column(db.String(100), default="General")
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
     pass_threshold = db.Column(db.Integer, default=70)
@@ -75,6 +78,7 @@ class GameMetadata(db.Model):
     max_age = db.Column(db.Integer, default=15)
     html_file = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
+    is_premium = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
         return {
@@ -84,13 +88,15 @@ class GameMetadata(db.Model):
             'subject': self.subject,
             'level': self.level,
             'concept': self.concept,
+            'topic': self.topic,
             'description': self.description,
             'instructions': self.instructions,
             'pass_threshold': self.pass_threshold,
             'min_age': self.min_age,
             'max_age': self.max_age,
             'html_file': self.html_file,
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            'is_premium': self.is_premium
         }
 
 
@@ -405,6 +411,8 @@ def scan_and_register_games(app):
 
 def init_db():
     with app.app_context():
+        print("Recreating database schema to apply updates...")
+        db.drop_all()
         db.create_all()
         scan_and_register_games(app)
 
