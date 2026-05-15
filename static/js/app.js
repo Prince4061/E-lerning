@@ -155,6 +155,92 @@ const App = {
   },
 
   /**
+   * Show leaderboard screen
+   */
+  async showLeaderboard() {
+    if (!this.user) {
+      this.showScreen('login');
+      return;
+    }
+    await this.loadLeaderboard('global');
+    this.showScreen('leaderboard');
+  },
+
+  /**
+   * Load leaderboard data
+   */
+  async loadLeaderboard(type = 'global') {
+    const listEl = document.getElementById('leaderboard-list');
+    const yourRankEl = document.getElementById('your-rank');
+
+    listEl.innerHTML = '<div class="text-center p-4">Loading...</div>';
+
+    try {
+      const url = type === 'global'
+        ? '/api/leaderboard'
+        : `/api/leaderboard/${type}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.length === 0) {
+        listEl.innerHTML = '<div class="leaderboard-empty">No players yet. Be the first! 🎮</div>';
+        yourRankEl.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      let userRank = null;
+
+      data.forEach((entry, index) => {
+        const rankClass = entry.rank <= 3 ? `top-3 rank-${entry.rank}` : '';
+        const medal = entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : '';
+
+        html += `
+          <div class="leaderboard-item ${rankClass}">
+            <div class="leaderboard-rank">${medal || '#' + entry.rank}</div>
+            <div class="leaderboard-avatar">${entry.name.charAt(0).toUpperCase()}</div>
+            <div class="leaderboard-info">
+              <div class="leaderboard-name">${entry.name}</div>
+              <div class="leaderboard-games">${entry.completed_games} games completed</div>
+            </div>
+            <div>
+              <div class="leaderboard-score">${entry.total_score}</div>
+              ${entry.total_stars > 0 ? `<span class="leaderboard-stars">⭐ ${entry.total_stars}</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        if (this.user && entry.user_id === this.user.id) {
+          userRank = entry.rank;
+        }
+      });
+
+      listEl.innerHTML = html;
+
+      if (userRank) {
+        yourRankEl.style.display = 'block';
+        yourRankEl.querySelector('.your-rank-value').textContent = '#' + userRank;
+      } else {
+        yourRankEl.style.display = 'none';
+      }
+
+      // Update filter buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((type === 'global' && btn.textContent === 'All') ||
+            btn.textContent.toLowerCase() === type) {
+          btn.classList.add('active');
+        }
+      });
+
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+      listEl.innerHTML = '<div class="leaderboard-empty">Error loading leaderboard</div>';
+    }
+  },
+
+  /**
    * Handle signup form submission
    */
   async handleSignup() {

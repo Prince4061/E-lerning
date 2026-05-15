@@ -302,6 +302,95 @@ def get_game_progress(user_id, game_id):
     return jsonify({'game_id': game_id, 'score': 0, 'stars': 0, 'completed': False})
 
 
+# ============== LEADERBOARD ROUTES ==============
+
+@app.route('/api/leaderboard')
+def get_leaderboard():
+    """ Get global leaderboard - all users sorted by total score """
+    # Get all users with their total scores
+    users = User.query.all()
+
+    leaderboard_data = []
+    for user in users:
+        # Calculate total score from all games
+        total_score = db.session.query(db.func.sum(GameProgress.score)).filter(
+            GameProgress.user_id == user.id
+        ).scalar() or 0
+
+        # Calculate total stars
+        total_stars = db.session.query(db.func.sum(GameProgress.stars)).filter(
+            GameProgress.user_id == user.id
+        ).scalar() or 0
+
+        # Count completed games
+        completed_games = GameProgress.query.filter_by(
+            user_id=user.id, completed=True
+        ).count()
+
+        leaderboard_data.append({
+            'rank': 0,  # Will be set after sorting
+            'user_id': user.id,
+            'name': user.name,
+            'total_score': total_score,
+            'total_stars': total_stars,
+            'completed_games': completed_games
+        })
+
+    # Sort by total score descending
+    leaderboard_data.sort(key=lambda x: x['total_score'], reverse=True)
+
+    # Assign ranks
+    for i, entry in enumerate(leaderboard_data):
+        entry['rank'] = i + 1
+
+    return jsonify(leaderboard_data)
+
+
+@app.route('/api/leaderboard/<subject>')
+def get_subject_leaderboard(subject):
+    """ Get leaderboard filtered by subject """
+    users = User.query.all()
+
+    leaderboard_data = []
+    for user in users:
+        # Get games for this subject
+        subject_games = GameMetadata.query.filter_by(subject=subject).all()
+        game_ids = [g.game_id for g in subject_games]
+
+        # Calculate total score for this subject
+        total_score = db.session.query(db.func.sum(GameProgress.score)).filter(
+            GameProgress.user_id == user.id,
+            GameProgress.game_id.in_(game_ids)
+        ).scalar() or 0
+
+        total_stars = db.session.query(db.func.sum(GameProgress.stars)).filter(
+            GameProgress.user_id == user.id,
+            GameProgress.game_id.in_(game_ids)
+        ).scalar() or 0
+
+        completed_games = GameProgress.query.filter(
+            GameProgress.user_id == user.id,
+            GameProgress.game_id.in_(game_ids),
+            GameProgress.completed == True
+        ).count()
+
+        leaderboard_data.append({
+            'rank': 0,
+            'user_id': user.id,
+            'name': user.name,
+            'total_score': total_score,
+            'total_stars': total_stars,
+            'completed_games': completed_games
+        })
+
+    leaderboard_data.sort(key=lambda x: x['total_score'], reverse=True)
+
+    for i, entry in enumerate(leaderboard_data):
+        entry['rank'] = i + 1
+
+    return jsonify(leaderboard_data)
+
+
 @app.route('/api/progress/unlock', methods=['POST'])
 def unlock_next_level():
     """

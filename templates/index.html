@@ -235,6 +235,9 @@
         <button class="btn btn-primary btn-large btn-full" onclick="App.showScreen('subjects')">
           🎯 Start New Game
         </button>
+        <button class="btn btn-secondary btn-large btn-full" onclick="App.showLeaderboard()" style="margin-top: 10px;">
+          🏆 Leaderboard
+        </button>
       </div>
 
       <div class="recent-score-card" id="recent-score-card" style="display: none;">
@@ -384,6 +387,30 @@
       <button class="btn btn-link" onclick="App.showScreen('hub')">
         ← Back to Levels
       </button>
+    </div>
+  </div>
+
+  <!-- Leaderboard Screen -->
+  <div id="screen-leaderboard" class="screen">
+    <div class="leaderboard-container">
+      <div class="back-btn" onclick="App.showScreen('home')">← Back</div>
+      <h2 class="screen-title">🏆 Leaderboard</h2>
+      <p class="screen-subtitle">Top players ranked by total score!</p>
+
+      <div class="leaderboard-filters">
+        <button class="filter-btn active" onclick="App.loadLeaderboard('global')">All</button>
+        <button class="filter-btn" onclick="App.loadLeaderboard('math')">Math</button>
+        <button class="filter-btn" onclick="App.loadLeaderboard('science')">Science</button>
+      </div>
+
+      <div class="leaderboard-list" id="leaderboard-list">
+        <!-- Leaderboard items loaded dynamically -->
+      </div>
+
+      <div class="your-rank" id="your-rank" style="display: none;">
+        <div class="your-rank-label">Your Rank</div>
+        <div class="your-rank-value">#0</div>
+      </div>
     </div>
   </div>
 
