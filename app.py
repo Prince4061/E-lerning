@@ -107,9 +107,71 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/admin')
+def admin_page():
+    return render_template('admin.html')
+
+
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'ok', 'message': 'EduQuest API Running'})
+
+
+# ============== ADMIN ROUTES ==============
+
+ADMIN_PIN = 'admin123'  # Simple PIN for admin access
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    """Admin login with PIN"""
+    data = request.json
+    if data.get('pin') == ADMIN_PIN:
+        return jsonify({'success': True, 'message': 'Admin logged in'})
+    return jsonify({'error': 'Invalid PIN'}), 401
+
+
+@app.route('/api/admin/users')
+def get_all_users():
+    """Get all users with their progress"""
+    users = User.query.all()
+    users_data = []
+    for user in users:
+        # Get total stats
+        total_score = db.session.query(db.func.sum(GameProgress.score)).filter(
+            GameProgress.user_id == user.id
+        ).scalar() or 0
+
+        total_stars = db.session.query(db.func.sum(GameProgress.stars)).filter(
+            GameProgress.user_id == user.id
+        ).scalar() or 0
+
+        completed_games = GameProgress.query.filter_by(
+            user_id=user.id, completed=True
+        ).count()
+
+        users_data.append({
+            'id': user.id,
+            'name': user.name,
+            'age': user.age,
+            'mobile': user.mobile,
+            'is_premium': user.is_premium,
+            'total_score': total_score,
+            'total_stars': total_stars,
+            'completed_games': completed_games,
+            'created_at': user.created_at.isoformat()
+        })
+
+    return jsonify(users_data)
+
+
+@app.route('/api/admin/user/<int:user_id>/premium', methods=['POST'])
+def toggle_user_premium(user_id):
+    """Toggle premium status for a user"""
+    data = request.json
+    user = User.query.get_or_404(user_id)
+    user.is_premium = data.get('is_premium', False)
+    db.session.commit()
+    return jsonify({'success': True, 'user': user.to_dict()})
 
 
 # ============== USER ROUTES ==============

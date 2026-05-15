@@ -162,25 +162,21 @@ const App = {
       this.showScreen('login');
       return;
     }
-    await this.loadLeaderboard('global');
+    await this.loadLeaderboard();
     this.showScreen('leaderboard');
   },
 
   /**
-   * Load leaderboard data
+   * Load leaderboard data (global - all games combined)
    */
-  async loadLeaderboard(type = 'global') {
+  async loadLeaderboard() {
     const listEl = document.getElementById('leaderboard-list');
     const yourRankEl = document.getElementById('your-rank');
 
     listEl.innerHTML = '<div class="text-center p-4">Loading...</div>';
 
     try {
-      const url = type === 'global'
-        ? '/api/leaderboard'
-        : `/api/leaderboard/${type}`;
-
-      const response = await fetch(url);
+      const response = await fetch('/api/leaderboard');
       const data = await response.json();
 
       if (data.length === 0) {
@@ -225,18 +221,124 @@ const App = {
         yourRankEl.style.display = 'none';
       }
 
-      // Update filter buttons
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if ((type === 'global' && btn.textContent === 'All') ||
-            btn.textContent.toLowerCase() === type) {
-          btn.classList.add('active');
-        }
-      });
-
     } catch (error) {
       console.error('Error loading leaderboard:', error);
       listEl.innerHTML = '<div class="leaderboard-empty">Error loading leaderboard</div>';
+    }
+  },
+
+  /**
+   * Show admin panel
+   */
+  showAdminPanel() {
+    document.getElementById('admin-login').style.display = 'block';
+    document.getElementById('admin-users').style.display = 'none';
+    this.showScreen('admin');
+  },
+
+  /**
+   * Admin login
+   */
+  async loginAdmin() {
+    const pin = document.getElementById('admin-pin').value;
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      const data = await response.json();
+      if (data.success) {
+        await this.loadAdminUsers();
+      } else {
+        alert('Invalid PIN!');
+      }
+    } catch (e) {
+      alert('Error logging in');
+    }
+  },
+
+  /**
+   * Load all users for admin
+   */
+  async loadAdminUsers() {
+    try {
+      const response = await fetch('/api/admin/users');
+      const users = await response.json();
+
+      document.getElementById('admin-login').style.display = 'none';
+      document.getElementById('admin-users').style.display = 'block';
+
+      // Update stats
+      document.getElementById('total-users').textContent = users.length;
+      document.getElementById('premium-users').textContent = users.filter(u => u.is_premium).length;
+      document.getElementById('total-gameplays').textContent = users.reduce((sum, u) => sum + u.completed_games, 0);
+
+      this.allUsers = users;
+      this.renderUsers(users);
+    } catch (e) {
+      console.error('Error loading users:', e);
+    }
+  },
+
+  /**
+   * Render users in admin panel
+   */
+  renderUsers(users) {
+    const list = document.getElementById('users-list');
+    if (users.length === 0) {
+      list.innerHTML = '<div class="admin-empty">No users found</div>';
+      return;
+    }
+
+    list.innerHTML = users.map(user => `
+      <div class="user-row">
+        <div class="col-name">
+          <div class="name">${user.name}</div>
+          <div class="mobile">${user.mobile}</div>
+        </div>
+        <div class="col-score">${user.total_score}</div>
+        <div class="col-games">${user.completed_games}</div>
+        <div class="col-status">
+          ${user.is_premium ? '<span class="premium-badge">👑 Premium</span>' : '<span class="free-badge">Free</span>'}
+        </div>
+        <div class="col-action">
+          ${user.is_premium
+            ? `<button class="btn-remove-premium" onclick="App.togglePremium(${user.id}, false)">Remove</button>`
+            : `<button class="btn-premium" onclick="App.togglePremium(${user.id}, true)">Make Premium</button>`
+          }
+        </div>
+      </div>
+    `).join('');
+  },
+
+  /**
+   * Filter users by search
+   */
+  filterUsers() {
+    const query = document.getElementById('user-search').value.toLowerCase();
+    const filtered = this.allUsers.filter(user =>
+      user.name.toLowerCase().includes(query) ||
+      user.mobile.includes(query)
+    );
+    this.renderUsers(filtered);
+  },
+
+  /**
+   * Toggle premium status
+   */
+  async togglePremium(userId, makePremium) {
+    try {
+      const response = await fetch(`/api/admin/user/${userId}/premium`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_premium: makePremium })
+      });
+      if (response.ok) {
+        await this.loadAdminUsers();
+      }
+    } catch (e) {
+      alert('Error updating user');
     }
   },
 
