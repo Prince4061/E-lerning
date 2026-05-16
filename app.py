@@ -6,8 +6,8 @@ import json
 import re
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'eduquest-secret-key-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eduquest_new.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'eduquest-secret-key-2024')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///eduquest_new.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -119,7 +119,7 @@ def health():
 
 # ============== ADMIN ROUTES ==============
 
-ADMIN_PIN = 'admin123'  # Simple PIN for admin access
+ADMIN_PIN = os.environ.get('ADMIN_PIN', 'admin123')  # Simple PIN for admin access
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
