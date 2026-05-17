@@ -577,7 +577,12 @@ def init_db():
             db.create_all()
             scan_and_register_games(app)
         except Exception as e:
-            print(f"Database initialization failed: {e}")
+            import traceback
+            print("=======================================")
+            print("DATABASE INITIALIZATION FAILED")
+            print("=======================================")
+            traceback.print_exc()
+            print("=======================================")
 
 # Initialize database and register games on startup (required for Gunicorn/Render)
 init_db()
