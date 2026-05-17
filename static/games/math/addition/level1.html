@@ -66,23 +66,23 @@
 
 <body>
 
-    <!-- Game UI Structure -->
+    <!-- Game UI Structure (Responsive for Mobile) -->
     <div id="game-ui" class="fixed inset-0 z-10 flex flex-col items-center justify-between p-4 md:p-8">
-        <div class="w-full flex justify-between items-start">
-            <div class="glass-panel p-3 md:p-4 rounded-2xl flex flex-col">
+        <div class="w-full flex flex-wrap justify-between items-start gap-2">
+            <div class="glass-panel p-2 md:p-4 rounded-2xl flex flex-col order-1">
                 <span class="text-blue-400 text-[10px] uppercase tracking-widest font-bold">Score</span>
-                <span id="score-val" class="text-white text-2xl md:text-3xl orbitron font-bold">0</span>
+                <span id="score-val" class="text-white text-xl md:text-3xl orbitron font-bold">0</span>
             </div>
 
             <div id="math-prompt"
-                class="glass-panel px-6 md:px-10 py-3 md:py-4 rounded-2xl flex flex-col items-center border-b-4 border-blue-500 transition-all duration-300">
+                class="glass-panel px-4 md:px-10 py-2 md:py-4 rounded-2xl flex flex-col items-center border-b-4 border-blue-500 transition-all duration-300 order-3 w-full sm:order-2 sm:w-auto mt-2 sm:mt-0">
                 <span class="text-blue-400 text-[10px] uppercase tracking-widest font-bold">Mission Target</span>
-                <span id="current-question" class="text-white text-3xl md:text-4xl orbitron font-bold">READY?</span>
+                <span id="current-question" class="text-white text-2xl md:text-4xl orbitron font-bold">READY?</span>
             </div>
 
-            <div class="glass-panel p-3 md:p-4 rounded-2xl flex flex-col items-end">
+            <div class="glass-panel p-2 md:p-4 rounded-2xl flex flex-col items-end order-2 sm:order-3">
                 <span class="text-red-400 text-[10px] uppercase tracking-widest font-bold">Hull Integrity</span>
-                <div class="w-24 md:w-32 h-3 bg-gray-800 rounded-full mt-2 overflow-hidden">
+                <div class="w-20 md:w-32 h-3 bg-gray-800 rounded-full mt-2 overflow-hidden">
                     <div id="health-bar"
                         class="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-300"
                         style="width: 100%"></div>
@@ -130,13 +130,12 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- 2. REQUIRED: Initialization Function ---
+        // --- Platform Initialization ---
         function math_space_shooter_init() {
             console.log("Game successfully initialized by EduQuest Platform!");
-            // गेम शुरू करने का लॉजिक (रेंडर लूप पहले से चल रहा है, इसलिए प्लेयर स्टार्ट स्क्रीन देखेगा)
         }
 
-        // --- Game Logic ---
+        // --- Game Setup ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const startBtn = document.getElementById('start-btn');
@@ -165,6 +164,7 @@
         let audioInitialized = false;
         let animationFrameId = null;
 
+        // --- Audio Setup (Tone.js) ---
         const laserSynth = new Tone.PolySynth(Tone.Synth).toDestination();
         laserSynth.set({ oscillator: { type: "square" }, envelope: { attack: 0, decay: 0.1, sustain: 0, release: 0.1 } });
 
@@ -179,6 +179,31 @@
             audioInitialized = true;
         }
 
+        // --- Safe Platform Call Wrapper ---
+        // This keeps your EduQuest logic 100% intact but prevents iframe CORS crashes
+        function safePlatformCall(action, data = null) {
+            try {
+                let platform = null;
+                try { platform = window.EduQuest || (window.parent && window.parent.EduQuest); } catch (e) { }
+
+                if (action === 'loseLife') {
+                    if (platform && typeof platform.loseLife === 'function') platform.loseLife();
+                    else if (window.parent !== window) window.parent.postMessage({ type: 'gameLifeLost' }, '*');
+                } else if (action === 'score') {
+                    if (platform && typeof platform.submitScore === 'function') platform.submitScore(data);
+                    else if (window.parent !== window) window.parent.postMessage({ type: 'gameScore', value: data }, '*');
+                } else if (action === 'endGame') {
+                    if (platform && typeof platform.endGame === 'function') {
+                        platform.finalScore = data;
+                        platform.endGame();
+                    } else if (window.parent !== window) window.parent.postMessage({ type: 'gameOver', score: data }, '*');
+                }
+            } catch (err) {
+                console.warn("Platform communication blocked (CORS), continuing game gracefully.", err);
+            }
+        }
+
+        // --- Game Classes ---
         class Star {
             constructor() { this.reset(); this.y = Math.random() * window.innerHeight; }
             reset() {
@@ -222,11 +247,14 @@
             constructor(value, isCorrect) {
                 this.x = Math.random() * (width - 100) + 50;
                 this.y = -80;
-                this.speed = 1.2 + (score / 30);
+                // INCREASED DIFFICULTY: Speed scales faster and has a higher cap
+                this.speed = Math.min(6, 1.5 + (score / 15));
                 this.value = value;
                 this.isCorrect = isCorrect;
-                this.hue = isCorrect ? 210 : 0;
+                this.hue = 0; // ALL enemies are red now to make it challenging
                 this.fireTimer = Math.random() * 2000;
+                // INCREASED DIFFICULTY: Enemies shoot faster as score increases
+                this.fireThreshold = Math.max(1200, 4000 - (score * 100));
                 this.wiggle = Math.random() * Math.PI * 2;
             }
             update(dt) {
@@ -234,8 +262,10 @@
                 this.x += Math.sin(this.wiggle + this.y / 50) * 0.5;
 
                 this.fireTimer += dt;
-                if (this.fireTimer > 4000) {
-                    enemyBullets.push(new EnemyBullet(this.x, this.y + 20));
+                if (this.fireTimer > this.fireThreshold) {
+                    // INCREASED DIFFICULTY: Enemy bullets travel faster as score increases
+                    let bulletSpeed = Math.min(12, 6 + (score / 20));
+                    enemyBullets.push(new EnemyBullet(this.x, this.y + 20, 0, bulletSpeed));
                     this.fireTimer = 0;
                 }
                 return (this.y > height + 80);
@@ -376,12 +406,13 @@
             }
         }
 
+        // --- Core Functions ---
         function createExplosion(x, y, color, intensity = 1) {
             try {
                 if (audioInitialized && explosionSynth) explosionSynth.triggerAttack();
-            } catch(e) { console.warn("Audio error", e); }
-            
-            const count = Math.min(50, 20 * intensity); // Cap particles
+            } catch (e) { console.warn("Audio error", e); }
+
+            const count = Math.min(50, 20 * intensity);
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(x, y, color));
             }
@@ -392,13 +423,8 @@
             if (health < 0) health = 0;
             healthBar.style.width = health + '%';
 
-            // 4. REQUIRED: लाइफ कम करने के लिए (EduQuest Platform Integration)
-            const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
-            if (platform && typeof platform.loseLife === 'function') {
-                platform.loseLife();
-            } else if (window.parent !== window) {
-                window.parent.postMessage({ type: 'gameLifeLost' }, '*');
-            }
+            // 4. REQUIRED: EduQuest Platform Integration - Lose Life
+            safePlatformCall('loseLife');
 
             canvas.style.transform = `translate(${(Math.random() - 0.5) * 20}px, ${(Math.random() - 0.5) * 20}px)`;
             setTimeout(() => canvas.style.transform = 'translate(0, 0)', 100);
@@ -407,7 +433,8 @@
         }
 
         function newQuestion() {
-            let maxNum = Math.min(40, 10 + Math.floor(score / 2));
+            // INCREASED DIFFICULTY: Math numbers grow faster (up to 100)
+            let maxNum = Math.min(100, 10 + Math.floor(score * 2.5));
             currentQuestion.a = Math.floor(Math.random() * maxNum) + 1;
             currentQuestion.b = Math.floor(Math.random() * maxNum) + 1;
             currentQuestion.ans = currentQuestion.a + currentQuestion.b;
@@ -439,15 +466,13 @@
             if (!lastTime) lastTime = now;
             let dt = now - lastTime;
             lastTime = now;
-            
-            // Clamp dt to prevent huge jumps (e.g. after tab switch)
+
             if (dt > 100) dt = 16;
             if (isNaN(dt)) dt = 16;
 
             stars.forEach(s => s.update());
 
             if (gameState === 'PLAYING' || gameState === 'BOSS') {
-                // Smooth player movement with NaN protection
                 if (!isNaN(player.targetX)) {
                     player.x += (player.targetX - player.x) * 0.2;
                 }
@@ -455,7 +480,9 @@
 
                 if (enemies.length === 0 && (!boss || boss.phase === 'FIGHT')) {
                     spawnWait += dt;
-                    if (spawnWait > 800) newQuestion();
+                    // INCREASED DIFFICULTY: Less waiting time between new enemy waves
+                    let currentSpawnDelay = Math.max(200, 800 - (score * 25));
+                    if (spawnWait > currentSpawnDelay) newQuestion();
                 }
 
                 for (let i = bullets.length - 1; i >= 0; i--) {
@@ -469,15 +496,9 @@
                             if (e.isCorrect) {
                                 score++;
                                 scoreVal.innerText = score;
-                                console.log("Correct hit! Score:", score);
 
-                                // 3. REQUIRED: स्कोर ऐड करने के लिए (EduQuest Platform Integration)
-                                const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
-                                if (platform && typeof platform.submitScore === 'function') {
-                                    platform.submitScore(10);
-                                } else if (window.parent !== window) {
-                                    window.parent.postMessage({ type: 'gameScore', value: 10 }, '*');
-                                }
+                                // 3. REQUIRED: EduQuest Platform Integration - Add Score
+                                safePlatformCall('score', 10);
 
                                 createExplosion(e.x, e.y, '#60a5fa', 2);
                                 if (boss) boss.health -= 10;
@@ -542,7 +563,7 @@
 
                 if (gameState !== 'START') {
                     ctx.save();
-                    ctx.translate(player.x || width/2, player.y || height/2);
+                    ctx.translate(player.x || width / 2, player.y || height / 2);
 
                     ctx.fillStyle = '#3b82f6';
                     ctx.strokeStyle = '#93c5fd';
@@ -600,36 +621,36 @@
                 msg.innerText = "The Void Mother has been defeated. Earth is safe.";
             }
 
-            // 5. REQUIRED: गेम खत्म होने पर (EduQuest Platform Integration)
-            // थोड़ा इंतज़ार करें ताकि प्लेयर अपनी जीत/हार की स्क्रीन देख सके
+            // 5. REQUIRED: EduQuest Platform Integration - End Game
             setTimeout(() => {
-                const platform = window.EduQuest || (window.parent && window.parent.EduQuest);
-                if (platform && typeof platform.endGame === 'function') {
-                    // स्कोर को 100 की स्केल पर भेजने के लिए (Platform 100 को 100% मानता है)
-                    platform.finalScore = Math.min(100, score * 4); 
-                    platform.endGame();
-                } else if (window.parent !== window) {
-                    window.parent.postMessage({ type: 'gameOver', score: Math.min(100, score * 4) }, '*');
-                }
+                safePlatformCall('endGame', Math.min(100, score * 4));
             }, 2500);
         }
 
         function resize() {
-            width = window.innerWidth; height = window.innerHeight;
-            canvas.width = width; canvas.height = height;
-            player.y = height - 100;
-            if (player.x === 0) { player.x = width / 2; player.targetX = width / 2; }
-            stars = []; for (let i = 0; i < 120; i++) stars.push(new Star());
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Adjust player position higher for mobile thumb space
+            player.y = height - 120;
+            if (player.x === 0 || isNaN(player.x)) {
+                player.x = width / 2;
+                player.targetX = width / 2;
+            }
+
+            stars = [];
+            for (let i = 0; i < 120; i++) stars.push(new Star());
         }
 
         window.addEventListener('resize', resize);
 
-        const handleMove = (x) => { player.targetX = Math.max(40, Math.min(width - 40, x)); };
+        const handleMove = (x) => {
+            player.targetX = Math.max(40, Math.min(width - 40, x));
+        };
+
         canvas.addEventListener('mousemove', (e) => handleMove(e.clientX));
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            handleMove(e.touches[0].clientX);
-        }, { passive: false });
 
         const shoot = () => {
             if (gameState !== 'PLAYING' && gameState !== 'BOSS') return;
@@ -639,7 +660,21 @@
         };
 
         canvas.addEventListener('mousedown', shoot);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); }, { passive: false });
+
+        // Touch controls optimized for mobile (Multi-touch support)
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            // Only move ship to finger if it's the first finger touching
+            if (e.touches.length === 1) {
+                handleMove(e.touches[0].clientX);
+            }
+            shoot();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handleMove(e.touches[0].clientX);
+        }, { passive: false });
 
         startBtn.onclick = () => {
             initAudio();
