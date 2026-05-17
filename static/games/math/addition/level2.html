@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Space Math Race - Addition</title>
+    <!-- Google Font for Sci-Fi look -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-red: #ff3131;
+            --neon-green: #39ff14;
+            --dark-bg: #0a0a1a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Orbitron', sans-serif;
+            background: radial-gradient(circle at center, #1a1a40 0%, #000000 100%);
+            color: white;
+            overflow: hidden;
+            user-select: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        /* --- Top Info Bar --- */
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-bottom: 2px solid var(--neon-blue);
+            box-shadow: 0 0 15px var(--neon-blue);
+            z-index: 10;
+            font-size: 1.1rem;
+        }
+
+        .info-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #score-display {
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+
+        #lives-display {
+            color: var(--neon-red);
+            text-shadow: 0 0 5px var(--neon-red);
+        }
+
+        /* --- Track Area (3D Perspective) --- */
+        #track-viewport {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #track-container {
+            width: 90%;
+            height: 350px;
+            background: linear-gradient(to bottom, #222, #111);
+            border: 3px solid var(--neon-blue);
+            box-shadow: inset 0 0 20px var(--neon-blue);
+            transform: rotateX(40deg);
+            /* Tilted effect */
+            transform-style: preserve-3d;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        /* Moving Road Animation */
+        #track-container::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 200%;
+            top: -50%;
+            left: 0;
+            background: repeating-linear-gradient(90deg,
+                    transparent 0%, transparent 49%,
+                    rgba(0, 243, 255, 0.3) 50%,
+                    transparent 51%, transparent 100%);
+            background-size: 100px 100%;
+            animation: moveRoad 0.8s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes moveRoad {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(50%);
+            }
+        }
+
+        .lane {
+            position: relative;
+            width: 100%;
+            height: 50%;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
+            z-index: 1;
+        }
+
+        .finish-line {
+            position: absolute;
+            right: 2%;
+            top: 0;
+            width: 30px;
+            height: 100%;
+            background: repeating-linear-gradient(45deg, #fff, #fff 10px, #000 10px, #000 20px);
+            box-shadow: 0 0 15px white;
+            z-index: 2;
+        }
+
+        /* --- Runners Design (Human vs AI) --- */
+        .runner {
+            position: absolute;
+            left: 2%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3.5rem;
+            /* Big emojis */
+            transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .runner-label {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Player Styling */
+        #player-runner {
+            filter: drop-shadow(0 0 15px var(--neon-red));
+        }
+
+        #player-runner .runner-label {
+            top: -25px;
+            color: var(--neon-red);
+            text-shadow: 0 0 5px var(--neon-red);
+        }
+
+        /* AI Styling */
+        #ai-runner {
+            filter: drop-shadow(0 0 15px var(--neon-blue));
+        }
+
+        #ai-runner .runner-label {
+            bottom: -25px;
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        /* Bobbing animation for running */
+        .running-anim {
+            animation: bob 0.3s alternate infinite ease-in-out;
+        }
+
+        @keyframes bob {
+            from {
+                transform: translateY(-50%) rotate(-5deg);
+            }
+
+            to {
+                transform: translateY(-60%) rotate(5deg);
+            }
+        }
+
+        /* --- Quiz & Controls Area --- */
+        #quiz-container {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-top: 3px solid var(--neon-pink);
+            box-shadow: 0 -5px 25px rgba(255, 0, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 220px;
+            z-index: 10;
+        }
+
+        #question-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 40px;
+            border-radius: 20px;
+            border: 2px solid var(--neon-pink);
+            margin-bottom: 20px;
+        }
+
+        #question {
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 15px var(--neon-pink);
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        #options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .option-btn {
+            background: linear-gradient(145deg, #1a1a3a, #2a2a5a);
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 15px;
+            font-size: 2.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px var(--neon-blue);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 25px var(--neon-blue);
+            background: var(--neon-blue);
+            color: #000;
+        }
+
+        .option-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .option-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        /* Feedback Animations */
+        .correct-flash {
+            animation: flashGreen 0.5s;
+            background: var(--neon-green) !important;
+            color: black !important;
+            box-shadow: 0 0 40px var(--neon-green) !important;
+            border-color: var(--neon-green) !important;
+        }
+
+        @keyframes flashGreen {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+
+        .wrong-shake {
+            animation: shake 0.4s;
+            background: var(--neon-red) !important;
+            color: white !important;
+            box-shadow: 0 0 40px var(--neon-red) !important;
+            border-color: var(--neon-red) !important;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-15px);
+            }
+
+            75% {
+                transform: translateX(15px);
+            }
+        }
+
+        /* Overlay for Game Over */
+        #game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        #overlay-message {
+            font-size: 4rem;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .win-text {
+            color: var(--neon-green);
+            text-shadow: 0 0 30px var(--neon-green);
+        }
+
+        .lose-text {
+            color: var(--neon-red);
+            text-shadow: 0 0 30px var(--neon-red);
+        }
+
+        #restart-btn {
+            background: var(--neon-pink);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--neon-pink);
+            transition: 0.3s;
+        }
+
+        #restart-btn:hover {
+            transform: scale(1.1);
+            background: white;
+            color: var(--neon-pink);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Step 3: EduQuest Metadata (JSON) -->
+    <script id="game-metadata" type="application/json">
+{
+  "game_id": "math-car-race-v2", 
+  "title": "Space Math Race",
+  "subject": "math",
+  "level": 1,
+  "concept": "Addition",
+  "topic": "Addition",
+  "is_premium": false,
+  "description": "Boost your speed with math! Solve addition problems to win the space race.",
+  "instructions": "Tap the correct answer to speed up your red car. Beat the blue AI car to the finish line!",
+  "pass_threshold": 80,
+  "min_age": 6
+}
+</script>
+
+    <div id="game-container">
+        <!-- Top Bar -->
+        <div id="top-bar">
+            <div class="info-box" id="score-display">💎 Score: <span id="score-val" style="font-weight:bold;">0</span>
+            </div>
+            <div class="info-box" style="color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink);">🏆 Level:
+                <span id="level-val">1</span></div>
+            <div class="info-box" id="lives-display">❤️ Lives: <span id="lives-val" style="font-weight:bold;">3</span>
+            </div>
+        </div>
+
+        <!-- Track Viewport -->
+        <div id="track-viewport">
+            <div id="track-container">
+                <div class="finish-line" style="left: 85%;"></div> <!-- Finish line at 85% -->
+
+                <div class="lane">
+                    <div id="player-runner" class="runner running-anim">
+                        🧑‍🚀
+                        <div class="runner-label">YOU</div>
+                    </div>
+                </div>
+                <div class="lane">
+                    <div id="ai-runner" class="runner running-anim">
+                        🤖
+                        <div class="runner-label">CPU</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Area -->
+        <div id="quiz-container">
+            <div id="question-box">
+                <h2 id="question">Ready?</h2>
+            </div>
+            <div id="options-grid">
+                <button class="option-btn" onclick="handleAnswerClick(this)">-</button>
+                <button class="option-btn" onclick="handleAnswerClick(this)">-</button>
+                <button class="option-btn" onclick="handleAnswerClick(this)">-</button>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="game-overlay">
+            <h1 id="overlay-message"></h1>
+            <button id="restart-btn" onclick="math_car_race_v2_init()">Play Again 🔄</button>
+        </div>
+
+        <!-- Start Game Menu (Fixes Browser Sound Auto-play Blocks) -->
+        <div id="start-overlay"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(5px);">
+            <h1
+                style="font-size: 3.5rem; margin-bottom: 10px; color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue); text-align: center;">
+                Space Math Race</h1>
+            <p style="font-size: 1.2rem; margin-bottom: 40px; color: #ccc;">Solve math to boost your speed. Beat the
+                CPU!</p>
+            <button onclick="initialStart()"
+                style="background: var(--neon-green); color: black; border: none; padding: 15px 40px; font-size: 1.5rem; font-family: 'Orbitron', sans-serif; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 0 20px var(--neon-green); transition: 0.3s;">Start
+                Engine 🚀</button>
+        </div>
+    </div>
+
+    <!-- Background Music -->
+    <audio id="bg-music" src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3" loop
+        preload="auto"></audio>
+
+    <script>
+        // --- Audio System (Web Audio API for guaranteed 0-latency SFX) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        const sfx = {
+            init: () => {
+                if (!audioCtx) audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            },
+            playTone: (freq, type, dur, vol = 0.1) => {
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + dur);
+            },
+            correct: () => {
+                sfx.playTone(600, 'sine', 0.1, 0.2);
+                setTimeout(() => sfx.playTone(800, 'sine', 0.15, 0.2), 100);
+            },
+            wrong: () => {
+                sfx.playTone(250, 'sawtooth', 0.3, 0.2);
+                setTimeout(() => sfx.playTone(200, 'sawtooth', 0.4, 0.2), 150);
+            },
+            win: () => {
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => sfx.playTone(freq, 'sine', 0.2, 0.2), i * 150);
+                });
+            },
+            lose: () => {
+                [300, 280, 250, 200].forEach((freq, i) => {
+                    setTimeout(() => sfx.playTone(freq, 'sawtooth', 0.3, 0.2), i * 200);
+                });
+            },
+            aiMove: () => {
+                sfx.playTone(150, 'square', 0.05, 0.01);
+            },
+            playerMove: () => {
+                sfx.playTone(400, 'triangle', 0.1, 0.05);
+            }
+        };
+
+        // --- Game State Variables ---
+        let gameState = {
+            level: 1,
+            score: 0,
+            lives: 3,
+            playerPos: 2,
+            aiPos: 2,
+            isActive: false,
+            correctAnswer: 0,
+            aiInterval: null,
+            finishLinePos: 85 // Percent
+        };
+
+        const bgMusic = document.getElementById('bg-music');
+
+        // --- Initial Start Wrapper (Enables Audio Policy) ---
+        function initialStart() {
+            document.getElementById('start-overlay').style.display = 'none';
+            sfx.init(); // Initialize Web Audio API
+
+            math_car_race_v2_init();
+
+            // Start Background Music
+            if (bgMusic) {
+                bgMusic.volume = 0.35;
+                bgMusic.currentTime = 0;
+                let playPromise = bgMusic.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => { console.log("Music auto-play blocked", error) });
+                }
+            }
+        }
+
+        // --- EduQuest Init Function ---
+        function math_car_race_v2_init() {
+            gameState.level = 1; // Reset to level 1 on full restart
+            resetGame();
+            startGame();
+        }
+
+        function resetGame() {
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.playerPos = 2;
+            gameState.aiPos = 2;
+            gameState.isActive = true;
+            clearInterval(gameState.aiInterval);
+
+            updateUI();
+            updateCarPositions();
+            document.getElementById('game-overlay').style.display = 'none';
+            setButtonsDisabled(false);
+        }
+
+        function startGame() {
+            generateQuestion();
+            // Start AI movement loop - Faster based on level
+            let aiSpeed = Math.max(400, 1200 - (gameState.level * 150));
+            gameState.aiInterval = setInterval(moveAI, aiSpeed);
+        }
+
+        // --- Game Logic ---
+        function generateQuestion() {
+            if (!gameState.isActive) return;
+
+            // Difficulty scales with Level!
+            // Level 1: Numbers up to 15, Level 2: 20, Level 3: 25...
+            let maxNum = 10 + (gameState.level * 5);
+
+            let num1 = Math.floor(Math.random() * maxNum) + 1;
+            let num2 = Math.floor(Math.random() * maxNum) + 1;
+            gameState.correctAnswer = num1 + num2;
+
+            document.getElementById('question').innerText = `${num1} + ${num2} = ?`;
+
+            generateOptions(gameState.correctAnswer);
+            setButtonsDisabled(false); // Re-enable buttons for new question
+        }
+
+        function generateOptions(correct) {
+            let options = [correct];
+            while (options.length < 3) {
+                let offset = Math.floor(Math.random() * 5) + 1;
+                // Randomly add or subtract offset to generate plausible wrong answers
+                let wrong = Math.random() > 0.5 ? correct + offset : correct - offset;
+                if (wrong > 0 && !options.includes(wrong)) {
+                    options.push(wrong);
+                }
+            }
+            // Shuffle array
+            options.sort(() => Math.random() - 0.5);
+
+            const btns = document.querySelectorAll('.option-btn');
+            btns.forEach((btn, i) => {
+                btn.innerText = options[i];
+                btn.classList.remove('correct-flash', 'wrong-shake'); // Reset visual effects
+            });
+        }
+
+        function handleAnswerClick(btnElement) {
+            if (!gameState.isActive || btnElement.disabled) return;
+
+            // Prevent spam clicking while animation runs
+            setButtonsDisabled(true);
+
+            const selectedAns = parseInt(btnElement.innerText);
+            const isCorrect = selectedAns === gameState.correctAnswer;
+
+            if (isCorrect) {
+                // Correct answer
+                btnElement.classList.add('correct-flash');
+                sfx.correct(); // Play Correct SFX
+                gameState.score += 10;
+                gameState.playerPos += 16; // Significant speed boost
+                sfx.playerMove(); // Movement SFX
+                if (typeof EduQuest !== 'undefined') EduQuest.submitScore(10);
+            } else {
+                // Wrong answer
+                btnElement.classList.add('wrong-shake');
+                sfx.wrong(); // Play Wrong SFX
+                gameState.lives--;
+                if (typeof EduQuest !== 'undefined') EduQuest.loseLife();
+            }
+
+            updateUI();
+            updateCarPositions();
+            const gameEnded = checkGameEndConditions();
+
+            if (!gameEnded) {
+                // Wait 1 second before showing the next question
+                setTimeout(generateQuestion, 1000);
+            }
+        }
+
+        function moveAI() {
+            if (!gameState.isActive) return;
+            // AI moves forward by a random amount, slightly boosted by level
+            let levelBonus = gameState.level * 0.5;
+            gameState.aiPos += Math.random() * 5 + 4 + levelBonus;
+            sfx.aiMove(); // Play AI footstep sound
+            updateCarPositions();
+            checkGameEndConditions();
+        }
+
+        function updateCarPositions() {
+            // Cap positions slightly past the finish line for visual effect
+            let pFinal = Math.min(gameState.playerPos, gameState.finishLinePos + 5);
+            let aFinal = Math.min(gameState.aiPos, gameState.finishLinePos + 5);
+            document.getElementById('player-runner').style.left = pFinal + '%';
+            document.getElementById('ai-runner').style.left = aFinal + '%';
+        }
+
+        function updateUI() {
+            document.getElementById('score-val').innerText = gameState.score;
+            document.getElementById('lives-val').innerText = gameState.lives;
+            document.getElementById('level-val').innerText = gameState.level;
+        }
+
+        function setButtonsDisabled(disabled) {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.disabled = disabled;
+            });
+        }
+
+        // --- End Game Handling ---
+        function checkGameEndConditions() {
+            if (gameState.lives <= 0) {
+                finishGame(false, "💔 Oh no!\nOut of lives.");
+                return true;
+            }
+            if (gameState.playerPos >= gameState.finishLinePos) {
+                levelUp();
+                return true;
+            }
+            if (gameState.aiPos >= gameState.finishLinePos) {
+                finishGame(false, "🏁 CPU Robot won.\nTry again!");
+                return true;
+            }
+            return false;
+        }
+
+        function levelUp() {
+            gameState.isActive = false;
+            clearInterval(gameState.aiInterval);
+            gameState.level++;
+
+            const overlay = document.getElementById('game-overlay');
+            const msgBox = document.getElementById('overlay-message');
+            const restartBtn = document.getElementById('restart-btn');
+
+            msgBox.innerHTML = `<span class="win-text">Level Cleared! 🎉</span><br><span style="font-size:1.5rem;color:white;">Get ready for Level ${gameState.level}...</span>`;
+            restartBtn.style.display = 'none'; // Hide restart button for auto-progression
+            overlay.style.display = 'flex';
+
+            sfx.win(); // Play win SFX
+
+            // Start next level after 3 seconds
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                restartBtn.style.display = 'block'; // Restore button for future game overs
+
+                gameState.playerPos = 2;
+                gameState.aiPos = 2;
+                gameState.isActive = true;
+                updateCarPositions();
+                updateUI();
+
+                startGame(); // Starts interval and generates question with new level difficulty
+            }, 3000);
+        }
+
+        function finishGame(isWin, message) {
+            gameState.isActive = false;
+            clearInterval(gameState.aiInterval);
+
+            const overlay = document.getElementById('game-overlay');
+            const msgBox = document.getElementById('overlay-message');
+
+            msgBox.innerText = message;
+            msgBox.className = isWin ? 'win-text' : 'lose-text';
+            overlay.style.display = 'flex';
+
+            if (isWin) {
+                sfx.win(); // Play win sequence
+            } else {
+                sfx.lose(); // Play lose sequence
+            }
+
+            if (typeof EduQuest !== 'undefined') EduQuest.endGame();
+        }
+
+        // Auto-init to start the game directly in the live preview
+        document.addEventListener("DOMContentLoaded", () => {
+            // Mock EduQuest API so errors don't occur outside the platform
+            if (typeof window.EduQuest === 'undefined') {
+                window.EduQuest = {
+                    submitScore: (s) => console.log(`API: +${s} Score`),
+                    loseLife: () => console.log('API: -1 Life'),
+                    endGame: () => console.log('API: Game Over')
+                };
+            }
+
+            // Wait for user to click "Start Engine" to comply with browser audio policies
+        });
+    </script>
+</body>
+
+</html>
