@@ -661,19 +661,44 @@
 
         canvas.addEventListener('mousedown', shoot);
 
-        // Touch controls optimized for mobile (Multi-touch support)
+        // Touch controls optimized for mobile (Tap vs Drag & Multi-touch support)
+        let isDragging = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            // Only move ship to finger if it's the first finger touching
             if (e.touches.length === 1) {
+                isDragging = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
                 handleMove(e.touches[0].clientX);
+            } else if (e.touches.length > 1) {
+                // Shoot immediately if a second finger taps
+                shoot();
             }
-            shoot();
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             handleMove(e.touches[0].clientX);
+
+            // Mark as dragging if finger moves more than 10 pixels
+            if (!isDragging && e.touches.length === 1) {
+                let dx = Math.abs(e.touches[0].clientX - touchStartX);
+                let dy = Math.abs(e.touches[0].clientY - touchStartY);
+                if (dx > 10 || dy > 10) {
+                    isDragging = true;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // Shoot only if it was a quick tap (no dragging) and last finger lifted
+            if (!isDragging && e.changedTouches.length === 1 && e.touches.length === 0) {
+                shoot();
+            }
         }, { passive: false });
 
         startBtn.onclick = () => {
