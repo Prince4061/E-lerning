@@ -570,13 +570,15 @@ def scan_and_register_games(app):
 
 def init_db():
     with app.app_context():
-        print("Recreating database schema to apply updates...")
-        db.drop_all()
-        db.create_all()
-        scan_and_register_games(app)
+        try:
+            print("Ensuring database tables exist...")
+            db.create_all()
+            scan_and_register_games(app)
+        except Exception as e:
+            print(f"Database initialization failed: {e}")
 
 # Initialize database and register games on startup (required for Gunicorn/Render)
 init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
