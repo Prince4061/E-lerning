@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html lang="hi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hamar Playground - Learning Through Play</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@500;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Quicksand:wght@500;600;700&family=Fredoka+One&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 </head>
+
 <body>
   <!-- Welcome Screen -->
   <div id="screen-welcome" class="screen active">
     <div class="welcome-container">
       <div class="logo-bounce">
         <span class="logo-icon">🚀</span>
-        <h1 class="logo-text">Hamar Playground</h1>
+        <h1 class="logo-text">हमर Playground</h1>
       </div>
       <p class="tagline">Games khel, Concepts Seekh!</p>
       <div class="mascot">
-        <img src="https://i.ibb.co/kV2GCB9M/Chat-GPT-Image-May-18-2026-12-19-32-PM-removebg-preview.png" alt="EduQuest Mascot" class="mascot-emoji" style="width:100px;height:100px;object-fit:contain;">
+        <img src="https://i.ibb.co/kV2GCB9M/Chat-GPT-Image-May-18-2026-12-19-32-PM-removebg-preview.png"
+          alt="EduQuest Mascot" class="mascot-emoji" style="width:100px;height:100px;object-fit:contain;">
         <div class="speech-bubble">Ready to learn?</div>
       </div>
       <div class="welcome-buttons">
@@ -46,12 +52,14 @@
 
       <div class="form-group">
         <label class="form-label">Mobile Number</label>
-        <input type="tel" id="signup-mobile" class="form-input" placeholder="Enter 10-digit mobile number" maxlength="10">
+        <input type="tel" id="signup-mobile" class="form-input" placeholder="Enter 10-digit mobile number"
+          maxlength="10">
       </div>
 
       <div class="form-group">
         <label class="form-label">How old are you? <span id="signup-age-display">8</span> years</label>
-        <input type="range" id="signup-age" class="age-slider" min="5" max="15" value="8" oninput="document.getElementById('signup-age-display').textContent = this.value">
+        <input type="range" id="signup-age" class="age-slider" min="5" max="15" value="8"
+          oninput="document.getElementById('signup-age-display').textContent = this.value">
         <div class="age-hints">
           <span>5</span><span>10</span><span>15</span>
         </div>
@@ -116,7 +124,8 @@
 
       <div class="form-group">
         <label class="form-label">How old are you? <span id="age-display">8</span> years</label>
-        <input type="range" id="player-age" class="age-slider" min="5" max="15" value="8" oninput="document.getElementById('age-display').textContent = this.value">
+        <input type="range" id="player-age" class="age-slider" min="5" max="15" value="8"
+          oninput="document.getElementById('age-display').textContent = this.value">
         <div class="age-hints">
           <span>5</span><span>10</span><span>15</span>
         </div>
@@ -258,7 +267,7 @@
       <div class="back-btn" onclick="App.showScreen('subjects')">← Back to Subjects</div>
       <h2 class="screen-title" id="topics-title">Choose a Topic!</h2>
       <p class="screen-subtitle">Explore different topics in this subject.</p>
-      
+
       <div class="subject-cards" id="topics-grid">
         <!-- Topics loaded dynamically -->
       </div>
@@ -429,7 +438,8 @@
         <h2 class="text-2xl font-bold text-yellow-600 mb-2">Premium Content</h2>
         <p class="text-gray-600 mb-6" id="premium-modal-message">This topic is for Premium users only!</p>
         <div class="modal-actions flex justify-center gap-4">
-          <button class="btn btn-secondary" onclick="document.getElementById('premium-modal-overlay').classList.remove('active')">Close</button>
+          <button class="btn btn-secondary"
+            onclick="document.getElementById('premium-modal-overlay').classList.remove('active')">Close</button>
           <button class="btn btn-primary" onclick="alert('Upgrade feature coming soon!')">Upgrade Now 🌟</button>
         </div>
       </div>
@@ -443,4 +453,5 @@
   <script src="{{ url_for('static', filename='js/game-loader.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>
